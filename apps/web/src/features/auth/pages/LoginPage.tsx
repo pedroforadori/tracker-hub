@@ -51,8 +51,13 @@ export function LoginPage() {
       }).catch(() => { /* non-critical */ })
 
       navigate('/')
-    } catch {
-      setServerError('E-mail ou senha incorretos. Tente novamente.')
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 402) {
+        setServerError('Acesso bloqueado por inadimplência. Contate o administrador da conta.')
+      } else {
+        setServerError('E-mail ou senha incorretos. Tente novamente.')
+      }
     }
   }
 

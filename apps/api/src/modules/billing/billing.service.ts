@@ -1,8 +1,14 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
+import { invalidateBillingCache } from '../../auth/jwt-auth.guard';
 import { BillingRepository } from './billing.repository';
 import { MailService } from '../mail/mail.service';
+
+// Tracks Stripe event IDs processed in the current process lifetime to prevent double-processing
+// on webhook retries. Bounded to avoid unbounded memory growth.
+const processedEvents = new Set<string>();
+const MAX_PROCESSED_EVENTS = 2000;
 
 @Injectable()
 export class BillingService {
@@ -15,6 +21,15 @@ export class BillingService {
     private readonly config: ConfigService,
   ) {
     this.stripe = new Stripe(this.config.getOrThrow<string>('STRIPE_SECRET_KEY'));
+
+    // Fail fast if Stripe is configured (secret key present) but price ID is missing
+    const priceId = this.config.get<string>('STRIPE_PRICE_ID');
+    if (!priceId) {
+      this.logger.warn(
+        'STRIPE_PRICE_ID is not set — subscription creation will be skipped. ' +
+          'Set this variable in production to enable billing.',
+      );
+    }
   }
 
   async getStatus(tenantId: string) {
@@ -62,6 +77,12 @@ export class BillingService {
     const tenant = await this.repo.findById(tenantId);
     if (!tenant?.stripeCustomerId || !tenant.stripeSubscriptionId) {
       throw new BadRequestException('Stripe customer or subscription not found.');
+    }
+
+    // Verify that the payment method is not already attached to a different customer (IDOR guard)
+    const pm = await this.stripe.paymentMethods.retrieve(paymentMethodId);
+    if (pm.customer && pm.customer !== tenant.stripeCustomerId) {
+      throw new BadRequestException('Payment method does not belong to this customer.');
     }
 
     await this.stripe.paymentMethods.attach(paymentMethodId, {
@@ -138,6 +159,17 @@ export class BillingService {
       throw new BadRequestException(`Webhook signature verification failed: ${(err as Error).message}`);
     }
 
+    // Idempotency: skip events already processed in this process lifetime
+    const eventId = event.id as string;
+    if (processedEvents.has(eventId)) {
+      this.logger.debug(`Skipping duplicate Stripe event: ${eventId}`);
+      return;
+    }
+    processedEvents.add(eventId);
+    if (processedEvents.size > MAX_PROCESSED_EVENTS) {
+      processedEvents.delete(processedEvents.values().next().value as string);
+    }
+
     const obj = event.data?.object as Record<string, unknown> | undefined;
     if (!obj) return;
 
@@ -154,6 +186,7 @@ export class BillingService {
           'Cobrança recusada pelo banco emissor do cartão';
 
         await this.repo.setPastDue(tenant.id, reason);
+        invalidateBillingCache(tenant.id);
 
         const admin = await this.repo.findAdminEmail(tenant.id);
         if (admin?.email) {
@@ -168,7 +201,10 @@ export class BillingService {
         if (!subscriptionId) break;
 
         const tenant = await this.repo.findByStripeSubscriptionId(subscriptionId);
-        if (tenant) await this.repo.setActive(tenant.id);
+        if (tenant) {
+          await this.repo.setActive(tenant.id);
+          invalidateBillingCache(tenant.id);
+        }
         break;
       }
 
@@ -177,7 +213,10 @@ export class BillingService {
         if (!subscriptionId) break;
 
         const tenant = await this.repo.findByStripeSubscriptionId(subscriptionId);
-        if (tenant) await this.repo.setBlocked(tenant.id);
+        if (tenant) {
+          await this.repo.setBlocked(tenant.id);
+          invalidateBillingCache(tenant.id);
+        }
         break;
       }
 

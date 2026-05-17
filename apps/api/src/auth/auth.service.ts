@@ -37,10 +37,9 @@ export class AuthService {
       });
     });
 
-    // Create Stripe Customer + trial subscription asynchronously — failure does not block registration
-    this.billing
-      .createCustomerAndSubscription(user.tenantId, user.email, user.name)
-      .catch((err) => this.logger.error('Failed to create Stripe subscription on register', err));
+    // Create Stripe Customer + trial subscription asynchronously — failure does not block registration.
+    // Retries once after 10 s to handle transient Stripe errors.
+    this.createStripeSubscriptionWithRetry(user.tenantId, user.email, user.name);
 
     return this.signToken(user.id, user.email, user.role, user.tenantId);
   }
@@ -53,6 +52,20 @@ export class AuthService {
     if (!valid) throw new UnauthorizedException('Credenciais inválidas');
 
     return this.signToken(user.id, user.email, user.role, user.tenantId);
+  }
+
+  private createStripeSubscriptionWithRetry(tenantId: string, email: string, name: string): void {
+    const attempt = (retriesLeft: number) => {
+      this.billing
+        .createCustomerAndSubscription(tenantId, email, name)
+        .catch((err) => {
+          this.logger.error('Failed to create Stripe subscription on register', err);
+          if (retriesLeft > 0) {
+            setTimeout(() => attempt(retriesLeft - 1), 10_000);
+          }
+        });
+    };
+    attempt(1);
   }
 
   private signToken(id: string, email: string, role: UserRole, tenantId: string) {

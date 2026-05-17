@@ -17,7 +17,11 @@ interface BillingCache {
 }
 
 const billingCache = new Map<string, BillingCache>();
-const CACHE_TTL_MS = 60_000;
+const CACHE_TTL_MS = 15_000;
+
+export function invalidateBillingCache(tenantId: string): void {
+  billingCache.delete(tenantId);
+}
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {

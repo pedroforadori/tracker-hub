@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -8,6 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
 import { Public } from '../../auth/public.decorator';
 import { Roles } from '../../auth/roles.decorator';
@@ -37,6 +39,7 @@ export class BillingController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   updatePaymentMethod(
     @CurrentUserDecorator() user: CurrentUser,
     @Body() dto: UpdatePaymentMethodDto,
@@ -50,7 +53,12 @@ export class BillingController {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async handleWebhook(@Req() req: any) {
     const signature = req.headers['stripe-signature'] as string;
-    await this.billing.handleWebhook(req.rawBody as Buffer, signature);
+    const rawBody = req.rawBody as Buffer | undefined;
+
+    if (!signature) throw new BadRequestException('Missing stripe-signature header.');
+    if (!rawBody || rawBody.length === 0) throw new BadRequestException('Missing or empty request body.');
+
+    await this.billing.handleWebhook(rawBody, signature);
     return { received: true };
   }
 }
