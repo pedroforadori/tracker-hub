@@ -22,11 +22,11 @@ export class ChipsRepository {
     return this.prisma.chip.create({ data: { ...dto, tenantId } });
   }
 
-  update(id: string, dto: UpdateChipDto) {
-    return this.prisma.chip.update({ where: { id }, data: dto });
+  update(id: string, tenantId: string, dto: UpdateChipDto) {
+    return this.prisma.chip.update({ where: { id, tenantId }, data: dto });
   }
 
-  remove(id: string) {
-    return this.prisma.chip.delete({ where: { id } });
+  remove(id: string, tenantId: string) {
+    return this.prisma.chip.delete({ where: { id, tenantId } });
   }
 }

@@ -21,11 +21,11 @@ export class CustomersService {
 
   async update(id: string, dto: UpdateCustomerDto, user: CurrentUser) {
     await this.findOne(id, user);
-    return this.repo.update(id, dto);
+    return this.repo.update(id, user.tenantId, dto);
   }
 
   async remove(id: string, user: CurrentUser) {
     await this.findOne(id, user);
-    return this.repo.remove(id);
+    return this.repo.remove(id, user.tenantId);
   }
 }

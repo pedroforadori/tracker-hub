@@ -25,11 +25,11 @@ export class TrackersRepository {
     return this.prisma.tracker.create({ data: { ...dto, tenantId } });
   }
 
-  update(id: string, dto: UpdateTrackerDto) {
-    return this.prisma.tracker.update({ where: { id }, data: dto });
+  update(id: string, tenantId: string, dto: UpdateTrackerDto) {
+    return this.prisma.tracker.update({ where: { id, tenantId }, data: dto });
   }
 
-  remove(id: string) {
-    return this.prisma.tracker.delete({ where: { id } });
+  remove(id: string, tenantId: string) {
+    return this.prisma.tracker.delete({ where: { id, tenantId } });
   }
 }

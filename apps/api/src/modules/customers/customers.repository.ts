@@ -19,11 +19,11 @@ export class CustomersRepository {
     return this.prisma.customer.create({ data: { ...dto, tenantId } });
   }
 
-  update(id: string, dto: UpdateCustomerDto) {
-    return this.prisma.customer.update({ where: { id }, data: dto });
+  update(id: string, tenantId: string, dto: UpdateCustomerDto) {
+    return this.prisma.customer.update({ where: { id, tenantId }, data: dto });
   }
 
-  remove(id: string) {
-    return this.prisma.customer.delete({ where: { id } });
+  remove(id: string, tenantId: string) {
+    return this.prisma.customer.delete({ where: { id, tenantId } });
   }
 }

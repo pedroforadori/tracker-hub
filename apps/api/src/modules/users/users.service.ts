@@ -43,6 +43,6 @@ export class UsersService {
 
   async remove(id: string, currentUser: CurrentUser) {
     await this.findOne(id, currentUser);
-    return this.repo.remove(id);
+    return this.repo.remove(id, currentUser.tenantId);
   }
 }

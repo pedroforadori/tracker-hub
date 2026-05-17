@@ -25,11 +25,11 @@ export class VehiclesRepository {
     return this.prisma.vehicle.create({ data: { ...dto, tenantId } });
   }
 
-  update(id: string, dto: UpdateVehicleDto) {
-    return this.prisma.vehicle.update({ where: { id }, data: dto });
+  update(id: string, tenantId: string, dto: UpdateVehicleDto) {
+    return this.prisma.vehicle.update({ where: { id, tenantId }, data: dto });
   }
 
-  remove(id: string) {
-    return this.prisma.vehicle.delete({ where: { id } });
+  remove(id: string, tenantId: string) {
+    return this.prisma.vehicle.delete({ where: { id, tenantId } });
   }
 }
