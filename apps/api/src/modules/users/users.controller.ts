@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../auth/roles.decorator';
@@ -33,14 +33,14 @@ export class UsersController {
   @Patch(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Atualizar membro da equipe' })
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUserDecorator() user: CurrentUser) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto, @CurrentUserDecorator() user: CurrentUser) {
     return this.service.update(id, dto, user);
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Remover membro da equipe' })
-  remove(@Param('id') id: string, @CurrentUserDecorator() user: CurrentUser) {
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUserDecorator() user: CurrentUser) {
     return this.service.remove(id, user);
   }
 }

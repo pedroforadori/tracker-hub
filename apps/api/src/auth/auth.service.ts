@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -15,17 +15,24 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const tenant = await this.prisma.tenant.create({ data: { name: dto.tenantName } });
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existing) throw new ConflictException('E-mail já cadastrado');
+
     const hashed = await hashPassword(dto.password);
-    const user = await this.prisma.user.create({
-      data: {
-        name: dto.name,
-        email: dto.email,
-        password: hashed,
-        role: UserRole.ADMIN,
-        tenantId: tenant.id,
-      },
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({ data: { name: dto.tenantName } });
+      return tx.user.create({
+        data: {
+          name: dto.name,
+          email: dto.email,
+          password: hashed,
+          role: UserRole.ADMIN,
+          tenantId: tenant.id,
+        },
+      });
     });
+
     return this.signToken(user.id, user.email, user.role, user.tenantId);
   }
 
