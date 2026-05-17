@@ -1,17 +1,21 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { hashPassword } from '../common/utils/password.util';
+import { BillingService } from '../modules/billing/billing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private billing: BillingService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -32,6 +36,11 @@ export class AuthService {
         },
       });
     });
+
+    // Create Stripe Customer + trial subscription asynchronously — failure does not block registration
+    this.billing
+      .createCustomerAndSubscription(user.tenantId, user.email, user.name)
+      .catch((err) => this.logger.error('Failed to create Stripe subscription on register', err));
 
     return this.signToken(user.id, user.email, user.role, user.tenantId);
   }
