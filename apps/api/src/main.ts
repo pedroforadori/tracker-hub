@@ -9,8 +9,16 @@ async function bootstrap() {
 
   app.use(helmet());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  const isProd = process.env.NODE_ENV === 'production';
+  const corsOrigins = process.env.CORS_ORIGINS?.split(',') ??
+    (isProd ? [] : ['http://localhost:5173', 'http://localhost:3000']);
+
+  if (isProd && !process.env.CORS_ORIGINS) {
+    console.warn('[Security] CORS_ORIGINS não definida em produção — todas as origens cross-origin bloqueadas');
+  }
+
   app.enableCors({
-    origin: process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:5173', 'http://localhost:3000'],
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
