@@ -1,9 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CurrentUser } from '../../common/types/current-user.type';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { CustomersRepository } from './customers.repository';
-
-interface CurrentUser { tenantId: string }
 
 @Injectable()
 export class CustomersService {

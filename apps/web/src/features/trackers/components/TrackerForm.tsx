@@ -1,26 +1,23 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { NumericFormat } from 'react-number-format'
 import { z } from 'zod'
 import { FormField } from '@/components/molecules/FormField'
-import { cn } from '@/lib/utils'
+import { FormActions } from '@/components/molecules/FormActions'
+import { INPUT_BASE } from '@/shared/constants/styles'
+import { useRelatedEntities } from '@/shared/hooks/useRelatedEntities'
+import { f } from '@/shared/schemas/fields'
 import type { Tracker, Vehicle } from '@/shared/types/api'
 import { vehiclesApi } from '../../vehicles/api/vehicles.api'
 
 const schema = z.object({
-  imei: z.string().length(15, 'IMEI deve ter 15 dígitos'),
-  brand: z.string().min(2, 'Informe a marca'),
-  model: z.string().min(2, 'Informe o modelo'),
+  imei: f.imei,
+  brand: f.name,
+  model: f.name,
   vehicleId: z.string().min(1, 'Selecione um veículo'),
 })
 
 export type TrackerFormData = z.infer<typeof schema>
-
-const inputBase = cn(
-  'w-full rounded-md border border-input bg-background px-3 py-2 text-sm',
-  'focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50',
-)
 
 export function TrackerForm({
   initialData,
@@ -31,11 +28,8 @@ export function TrackerForm({
   onSubmit: (data: TrackerFormData) => Promise<void>
   onCancel: () => void
 }) {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([])
-
-  useEffect(() => {
-    vehiclesApi.getAll().then(setVehicles).catch(() => {})
-  }, [])
+  const isEditing = !!initialData?.id
+  const vehicles = useRelatedEntities<Vehicle>(vehiclesApi.getAll)
 
   const {
     register,
@@ -64,21 +58,21 @@ export function TrackerForm({
           defaultValue={initialData?.imei}
           onValueChange={(v) => setValue('imei', v.value, { shouldValidate: true })}
           placeholder="356938035643809"
-          className={inputBase}
+          className={INPUT_BASE}
         />
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Marca" htmlFor="brand" error={errors.brand?.message} required>
-          <input id="brand" {...register('brand')} placeholder="Suntech" className={inputBase} />
+          <input id="brand" {...register('brand')} placeholder="Suntech" className={INPUT_BASE} />
         </FormField>
         <FormField label="Modelo" htmlFor="model" error={errors.model?.message} required>
-          <input id="model" {...register('model')} placeholder="TK303" className={inputBase} />
+          <input id="model" {...register('model')} placeholder="TK303" className={INPUT_BASE} />
         </FormField>
       </div>
 
       <FormField label="Veículo" htmlFor="vehicleId" error={errors.vehicleId?.message} required>
-        <select id="vehicleId" {...register('vehicleId')} className={inputBase}>
+        <select id="vehicleId" {...register('vehicleId')} className={INPUT_BASE}>
           <option value="">Selecione um veículo</option>
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>{v.plate} — {v.brand} {v.model}</option>
@@ -86,13 +80,7 @@ export function TrackerForm({
         </select>
       </FormField>
 
-      <div className="flex justify-end gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">Cancelar</button>
-        <button type="submit" disabled={isSubmitting}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50">
-          {isSubmitting ? 'Salvando...' : initialData?.id ? 'Salvar alterações' : 'Cadastrar'}
-        </button>
-      </div>
+      <FormActions onCancel={onCancel} isSubmitting={isSubmitting} isEditing={isEditing} />
     </form>
   )
 }

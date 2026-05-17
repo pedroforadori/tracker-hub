@@ -1,5 +1,6 @@
-import { use, useState } from 'react'
+import { use } from 'react'
 import { useAuthStore } from '@/shared/store/authStore'
+import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { TeamMember } from '@/shared/types/api'
 import { teamApi } from '../api/team.api'
 import { TeamForm, type TeamFormData } from '../components/TeamForm'
@@ -73,25 +74,14 @@ function TeamList({ onEdit, onDelete }: { onEdit: (m: TeamMember) => void; onDel
 }
 
 export function TeamPage() {
-  const [showForm, setShowForm] = useState(false)
-  const [editing, setEditing] = useState<TeamMember | null>(null)
-  const [refresh, setRefresh] = useState(0)
-  const [isLimited, setIsLimited] = useState(false)
-
-  const invalidate = () => {
-    teamPromise = teamApi.getAll()
-    teamPromise.then((members) => {
-      setIsLimited(members.filter((m) => m.role === 'USER').length >= MAX_SECONDARY_USERS)
-    })
-    setRefresh((n) => n + 1)
-  }
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, invalidate } =
+    useEntityList<TeamMember>(teamApi.remove, () => { teamPromise = teamApi.getAll() })
 
   const handleSubmit = async (data: TeamFormData) => {
     try {
       if (editing) await teamApi.update(editing.id, data)
       else await teamApi.create(data)
-      setShowForm(false)
-      setEditing(null)
+      handleCancel()
       invalidate()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao salvar'
@@ -104,15 +94,12 @@ export function TeamPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Equipe</h1>
         {!showForm && (
-          <div title={isLimited ? 'Limite de 3 usuários adicionais atingido' : undefined}>
-            <button
-              onClick={() => { setEditing(null); setShowForm(true) }}
-              disabled={isLimited}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              + Adicionar Membro
-            </button>
-          </div>
+          <button
+            onClick={() => { setEditing(null); setShowForm(true) }}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            + Adicionar Membro
+          </button>
         )}
       </div>
 
@@ -122,14 +109,14 @@ export function TeamPage() {
           <TeamForm
             initialData={editing ?? undefined}
             onSubmit={handleSubmit}
-            onCancel={() => { setShowForm(false); setEditing(null) }}
+            onCancel={handleCancel}
           />
         </div>
       ) : (
         <TeamList
-          onEdit={(m) => { setEditing(m); setShowForm(true) }}
+          onEdit={handleEdit}
           onDelete={async (id) => {
-            if (confirm('Confirma remoção do membro?')) {
+            if (window.confirm('Confirma remoção do membro?')) {
               await teamApi.remove(id)
               invalidate()
             }

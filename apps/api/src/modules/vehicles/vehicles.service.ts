@@ -1,9 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CurrentUser } from '../../common/types/current-user.type';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { VehiclesRepository } from './vehicles.repository';
-
-interface CurrentUser { tenantId: string }
 
 @Injectable()
 export class VehiclesService {

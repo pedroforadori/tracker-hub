@@ -4,12 +4,13 @@ import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { cn } from '@/lib/utils'
+import { f } from '@/shared/schemas/fields'
 import { useAuthStore } from '@/shared/store/authStore'
 import { authApi } from '../api/auth.api'
 
 const loginSchema = z.object({
-  email: z.string().email('E-mail inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  email: f.email,
+  password: f.password,
 })
 
 type LoginForm = z.infer<typeof loginSchema>

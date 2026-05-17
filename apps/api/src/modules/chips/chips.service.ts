@@ -1,9 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CurrentUser } from '../../common/types/current-user.type';
 import { CreateChipDto } from './dto/create-chip.dto';
 import { UpdateChipDto } from './dto/update-chip.dto';
 import { ChipsRepository } from './chips.repository';
-
-interface CurrentUser { tenantId: string }
 
 @Injectable()
 export class ChipsService {
