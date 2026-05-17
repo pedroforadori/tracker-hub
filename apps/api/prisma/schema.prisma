@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+model Tenant {
+  id        String     @id @default(cuid())
+  name      String
+  users     User[]
+  customers Customer[]
+  vehicles  Vehicle[]
+  trackers  Tracker[]
+  chips     Chip[]
+  createdAt DateTime   @default(now())
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(USER)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  cnpj      String    @unique
+  email     String
+  phone     String
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  vehicles  Vehicle[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Vehicle {
+  id         String    @id @default(cuid())
+  plate      String    @unique
+  brand      String
+  model      String
+  year       Int
+  customerId String
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+  trackers   Tracker[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Tracker {
+  id        String   @id @default(cuid())
+  imei      String   @unique
+  model     String
+  brand     String
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  chip      Chip?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Chip {
+  id          String   @id @default(cuid())
+  iccid       String   @unique
+  phoneNumber String
+  provider    String
+  trackerId   String   @unique
+  tracker     Tracker  @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
