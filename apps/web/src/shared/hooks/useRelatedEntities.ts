@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export function useRelatedEntities<T>(fetcher: () => Promise<T[]>): T[] {
   const [items, setItems] = useState<T[]>([])
+  // Capture the fetcher reference on mount only — callers typically pass inline arrows
+  // and we intentionally run this once, not on every render.
+  const fetcherRef = useRef(fetcher)
 
   useEffect(() => {
-    fetcher().then(setItems).catch((err) => console.error('[useRelatedEntities]', err))
-    // fetcher é arrow function inline nos callers — adicioná-la nas deps causaria loop infinito
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetcherRef.current().then(setItems).catch((err) => console.error('[useRelatedEntities]', err))
   }, [])
 
   return items

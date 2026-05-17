@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { cn } from '@/lib/utils'
 import { f } from '@/shared/schemas/fields'
 import { useAuthStore } from '@/shared/store/authStore'
+import { useBillingStore } from '@/shared/store/billingStore'
+import { billingApi } from '../../billing/api/billing.api'
 import { authApi } from '../api/auth.api'
 
 const loginSchema = z.object({
@@ -40,9 +42,22 @@ export function LoginPage() {
     try {
       const res = await authApi.login(data.email, data.password)
       login(res.accessToken, res.user)
+
+      // Check billing status on every login to show payment warnings
+      billingApi.getStatus().then((status) => {
+        if (status.status === 'PAST_DUE' && status.gracePeriodEndsAt) {
+          useBillingStore.getState().setPastDue(status.gracePeriodEndsAt)
+        }
+      }).catch(() => { /* non-critical */ })
+
       navigate('/')
-    } catch {
-      setServerError('E-mail ou senha incorretos. Tente novamente.')
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 402) {
+        setServerError('Acesso bloqueado por inadimplência. Contate o administrador da conta.')
+      } else {
+        setServerError('E-mail ou senha incorretos. Tente novamente.')
+      }
     }
   }
 

@@ -12,15 +12,31 @@ enum UserRole {
   USER
 }
 
+enum PlanStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  BLOCKED
+  CANCELED
+}
+
 model Tenant {
-  id        String     @id @default(cuid())
-  name      String
-  users     User[]
-  customers Customer[]
-  vehicles  Vehicle[]
-  trackers  Tracker[]
-  chips     Chip[]
-  createdAt DateTime   @default(now())
+  id                    String     @id @default(cuid())
+  name                  String
+  users                 User[]
+  customers             Customer[]
+  vehicles              Vehicle[]
+  trackers              Tracker[]
+  chips                 Chip[]
+  createdAt             DateTime   @default(now())
+  planStatus            PlanStatus @default(TRIALING)
+  stripeCustomerId      String?    @unique
+  stripeSubscriptionId  String?    @unique
+  stripePaymentMethodId String?
+  blockReason           String?
+  gracePeriodEndsAt     DateTime?
+  blockedAt             DateTime?
+  trialEndsAt           DateTime?
 }
 
 model User {
