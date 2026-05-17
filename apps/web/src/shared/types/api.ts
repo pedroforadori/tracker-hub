@@ -1,5 +1,16 @@
 export type UserRole = 'ADMIN' | 'USER'
 
+export type PlanStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'BLOCKED' | 'CANCELED'
+
+export interface BillingStatus {
+  status: PlanStatus
+  blockReason: string | null
+  gracePeriodEndsAt: string | null
+  trialEndsAt: string | null
+  lastFour: string | null
+  cardBrand: string | null
+}
+
 export interface AuthUser {
   id: string
   email: string

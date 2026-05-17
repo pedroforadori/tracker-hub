@@ -1,4 +1,5 @@
 import {
+  CreditCard,
   Cpu,
   LogOut,
   MapPin,
@@ -7,6 +8,7 @@ import {
   Car,
 } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { PaymentWarningBanner } from '@/features/billing/components/PaymentWarningBanner'
 import { ThemeToggle } from '@/components/atoms/ThemeToggle'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '../store/authStore'
@@ -55,20 +57,36 @@ export function MainLayout() {
           ))}
 
           {user?.role === 'ADMIN' && (
-            <NavLink
-              to="/team"
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                )
-              }
-            >
-              <Users size={16} />
-              Equipe
-            </NavLink>
+            <>
+              <NavLink
+                to="/team"
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  )
+                }
+              >
+                <Users size={16} />
+                Equipe
+              </NavLink>
+              <NavLink
+                to="/billing"
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  )
+                }
+              >
+                <CreditCard size={16} />
+                Cobrança
+              </NavLink>
+            </>
           )}
         </nav>
 
@@ -91,6 +109,7 @@ export function MainLayout() {
         <header className="flex items-center justify-end border-b border-border px-6 py-3">
           <ThemeToggle />
         </header>
+        <PaymentWarningBanner />
         <main className="flex-1 overflow-auto p-6">
           <Outlet />
         </main>
