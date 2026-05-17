@@ -1,0 +1,31 @@
+{
+  "name": "tracker-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MicroSaaS de rastreamento veicular",
+  "scripts": {
+    "db:up": "docker compose -f docker/docker-compose.yml up -d",
+    "db:down": "docker compose -f docker/docker-compose.yml down",
+    "prisma:generate": "pnpm --filter api exec prisma generate",
+    "prisma:migrate": "pnpm --filter api exec prisma migrate dev",
+    "dev:landing": "pnpm --filter landing-page dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api start:dev",
+    "dev:all": "pnpm --parallel --filter \"./apps/*\" dev",
+    "build:all": "pnpm --filter \"./apps/*\" build",
+    "test:all": "pnpm --filter \"./apps/*\" test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@11.0.0-alpha.14",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@swc/core",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
+  }
+}
