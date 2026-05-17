@@ -1,4 +1,5 @@
-import { use, useState } from 'react'
+import { use } from 'react'
+import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Tracker } from '@/shared/types/api'
 import { trackersApi } from '../api/trackers.api'
 import { TrackerForm, type TrackerFormData } from '../components/TrackerForm'
@@ -45,16 +46,13 @@ function TrackersList({ onEdit, onDelete }: { onEdit: (t: Tracker) => void; onDe
 }
 
 export function TrackersPage() {
-  const [showForm, setShowForm] = useState(false)
-  const [editing, setEditing] = useState<Tracker | null>(null)
-  const [refresh, setRefresh] = useState(0)
-
-  const invalidate = () => { trackersPromise = trackersApi.getAll(); setRefresh((n) => n + 1) }
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
+    useEntityList<Tracker>(trackersApi.remove, () => { trackersPromise = trackersApi.getAll() })
 
   const handleSubmit = async (data: TrackerFormData) => {
     if (editing) await trackersApi.update(editing.id, data)
     else await trackersApi.create(data)
-    setShowForm(false); setEditing(null); invalidate()
+    afterSubmit()
   }
 
   return (
@@ -72,13 +70,11 @@ export function TrackersPage() {
       {showForm ? (
         <div className="rounded-lg border border-border p-6">
           <h2 className="mb-4 text-base font-medium">{editing ? 'Editar Rastreador' : 'Novo Rastreador'}</h2>
-          <TrackerForm initialData={editing ?? undefined} onSubmit={handleSubmit}
-            onCancel={() => { setShowForm(false); setEditing(null) }} />
+          <TrackerForm initialData={editing ?? undefined} onSubmit={handleSubmit} onCancel={handleCancel} />
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <TrackersList onEdit={(t) => { setEditing(t); setShowForm(true) }}
-            onDelete={async (id) => { if (confirm('Confirma exclusão?')) { await trackersApi.remove(id); invalidate() } }} />
+          <TrackersList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} />
         </div>
       )}
     </div>

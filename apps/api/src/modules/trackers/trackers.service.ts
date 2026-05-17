@@ -1,9 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CurrentUser } from '../../common/types/current-user.type';
 import { CreateTrackerDto } from './dto/create-tracker.dto';
 import { UpdateTrackerDto } from './dto/update-tracker.dto';
 import { TrackersRepository } from './trackers.repository';
-
-interface CurrentUser { tenantId: string }
 
 @Injectable()
 export class TrackersService {
