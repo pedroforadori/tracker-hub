@@ -1,4 +1,5 @@
-import { use, useState } from 'react'
+import { use } from 'react'
+import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Vehicle } from '@/shared/types/api'
 import { vehiclesApi } from '../api/vehicles.api'
 import { VehicleForm, type VehicleFormData } from '../components/VehicleForm'
@@ -44,16 +45,13 @@ function VehiclesList({ onEdit, onDelete }: { onEdit: (v: Vehicle) => void; onDe
 }
 
 export function VehiclesPage() {
-  const [showForm, setShowForm] = useState(false)
-  const [editing, setEditing] = useState<Vehicle | null>(null)
-  const [refresh, setRefresh] = useState(0)
-
-  const invalidate = () => { vehiclesPromise = vehiclesApi.getAll(); setRefresh((n) => n + 1) }
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
+    useEntityList<Vehicle>(vehiclesApi.remove, () => { vehiclesPromise = vehiclesApi.getAll() })
 
   const handleSubmit = async (data: VehicleFormData) => {
     if (editing) await vehiclesApi.update(editing.id, data)
     else await vehiclesApi.create(data)
-    setShowForm(false); setEditing(null); invalidate()
+    afterSubmit()
   }
 
   return (
@@ -71,13 +69,11 @@ export function VehiclesPage() {
       {showForm ? (
         <div className="rounded-lg border border-border p-6">
           <h2 className="mb-4 text-base font-medium">{editing ? 'Editar Veículo' : 'Novo Veículo'}</h2>
-          <VehicleForm initialData={editing ?? undefined} onSubmit={handleSubmit}
-            onCancel={() => { setShowForm(false); setEditing(null) }} />
+          <VehicleForm initialData={editing ?? undefined} onSubmit={handleSubmit} onCancel={handleCancel} />
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <VehiclesList onEdit={(v) => { setEditing(v); setShowForm(true) }}
-            onDelete={async (id) => { if (confirm('Confirma exclusão?')) { await vehiclesApi.remove(id); invalidate() } }} />
+          <VehiclesList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} />
         </div>
       )}
     </div>

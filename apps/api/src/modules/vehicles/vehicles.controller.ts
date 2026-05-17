@@ -1,5 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Request } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUserDecorator } from '../../common/decorators/current-user.decorator';
+import type { CurrentUser } from '../../common/types/current-user.type';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { VehiclesService } from './vehicles.service';
@@ -12,29 +14,29 @@ export class VehiclesController {
 
   @Get()
   @ApiOperation({ summary: 'Listar veículos do tenant' })
-  findAll(@Request() req: { user: { tenantId: string } }) { return this.service.findAll(req.user); }
+  findAll(@CurrentUserDecorator() user: CurrentUser) { return this.service.findAll(user); }
 
   @Get(':id')
   @ApiOperation({ summary: 'Buscar veículo por ID' })
-  findOne(@Param('id') id: string, @Request() req: { user: { tenantId: string } }) {
-    return this.service.findOne(id, req.user);
+  findOne(@Param('id') id: string, @CurrentUserDecorator() user: CurrentUser) {
+    return this.service.findOne(id, user);
   }
 
   @Post()
   @ApiOperation({ summary: 'Cadastrar veículo' })
-  create(@Body() dto: CreateVehicleDto, @Request() req: { user: { tenantId: string } }) {
-    return this.service.create(dto, req.user);
+  create(@Body() dto: CreateVehicleDto, @CurrentUserDecorator() user: CurrentUser) {
+    return this.service.create(dto, user);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualizar veículo' })
-  update(@Param('id') id: string, @Body() dto: UpdateVehicleDto, @Request() req: { user: { tenantId: string } }) {
-    return this.service.update(id, dto, req.user);
+  update(@Param('id') id: string, @Body() dto: UpdateVehicleDto, @CurrentUserDecorator() user: CurrentUser) {
+    return this.service.update(id, dto, user);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Remover veículo' })
-  remove(@Param('id') id: string, @Request() req: { user: { tenantId: string } }) {
-    return this.service.remove(id, req.user);
+  remove(@Param('id') id: string, @CurrentUserDecorator() user: CurrentUser) {
+    return this.service.remove(id, user);
   }
 }

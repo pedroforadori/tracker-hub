@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { hashPassword } from '../../common/utils/password.util';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -9,17 +9,26 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAllByTenant(tenantId: string) {
+  private readonly USER_SELECT = {
+    id: true,
+    name: true,
+    email: true,
+    role: true,
+    tenantId: true,
+    createdAt: true,
+  } as const;
+
+  findAll(tenantId: string) {
     return this.prisma.user.findMany({
       where: { tenantId },
-      select: { id: true, name: true, email: true, role: true, tenantId: true, createdAt: true },
+      select: this.USER_SELECT,
     });
   }
 
-  findOneByTenant(id: string, tenantId: string) {
+  findOne(id: string, tenantId: string) {
     return this.prisma.user.findFirst({
       where: { id, tenantId },
-      select: { id: true, name: true, email: true, role: true, tenantId: true, createdAt: true },
+      select: this.USER_SELECT,
     });
   }
 
@@ -28,20 +37,20 @@ export class UsersRepository {
   }
 
   async create(dto: CreateUserDto, tenantId: string) {
-    const hashed = await bcrypt.hash(dto.password, 12);
+    const hashed = await hashPassword(dto.password);
     return this.prisma.user.create({
       data: { name: dto.name, email: dto.email, password: hashed, role: UserRole.USER, tenantId },
-      select: { id: true, name: true, email: true, role: true, tenantId: true, createdAt: true },
+      select: this.USER_SELECT,
     });
   }
 
   async update(id: string, tenantId: string, dto: UpdateUserDto) {
     const data: Record<string, unknown> = { name: dto.name, email: dto.email };
-    if (dto.password) data.password = await bcrypt.hash(dto.password, 12);
+    if (dto.password) data.password = await hashPassword(dto.password);
     return this.prisma.user.update({
       where: { id, tenantId },
       data,
-      select: { id: true, name: true, email: true, role: true, tenantId: true, createdAt: true },
+      select: this.USER_SELECT,
     });
   }
 

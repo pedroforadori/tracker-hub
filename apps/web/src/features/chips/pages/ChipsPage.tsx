@@ -1,4 +1,5 @@
-import { use, useState } from 'react'
+import { use } from 'react'
+import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Chip } from '@/shared/types/api'
 import { chipsApi } from '../api/chips.api'
 import { ChipForm, type ChipFormData } from '../components/ChipForm'
@@ -42,16 +43,13 @@ function ChipsList({ onEdit, onDelete }: { onEdit: (c: Chip) => void; onDelete: 
 }
 
 export function ChipsPage() {
-  const [showForm, setShowForm] = useState(false)
-  const [editing, setEditing] = useState<Chip | null>(null)
-  const [refresh, setRefresh] = useState(0)
-
-  const invalidate = () => { chipsPromise = chipsApi.getAll(); setRefresh((n) => n + 1) }
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
+    useEntityList<Chip>(chipsApi.remove, () => { chipsPromise = chipsApi.getAll() })
 
   const handleSubmit = async (data: ChipFormData) => {
     if (editing) await chipsApi.update(editing.id, data)
     else await chipsApi.create(data)
-    setShowForm(false); setEditing(null); invalidate()
+    afterSubmit()
   }
 
   return (
@@ -69,13 +67,11 @@ export function ChipsPage() {
       {showForm ? (
         <div className="rounded-lg border border-border p-6">
           <h2 className="mb-4 text-base font-medium">{editing ? 'Editar Chip' : 'Novo Chip'}</h2>
-          <ChipForm initialData={editing ?? undefined} onSubmit={handleSubmit}
-            onCancel={() => { setShowForm(false); setEditing(null) }} />
+          <ChipForm initialData={editing ?? undefined} onSubmit={handleSubmit} onCancel={handleCancel} />
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <ChipsList onEdit={(c) => { setEditing(c); setShowForm(true) }}
-            onDelete={async (id) => { if (confirm('Confirma exclusão?')) { await chipsApi.remove(id); invalidate() } }} />
+          <ChipsList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} />
         </div>
       )}
     </div>

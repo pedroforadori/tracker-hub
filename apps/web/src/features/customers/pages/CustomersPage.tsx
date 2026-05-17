@@ -1,5 +1,6 @@
 'use client'
-import { use, useState } from 'react'
+import { use } from 'react'
+import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Customer } from '@/shared/types/api'
 import { customersApi } from '../api/customers.api'
 import { CustomerForm, type CustomerFormData } from '../components/CustomerForm'
@@ -61,35 +62,13 @@ function CustomersList({
 }
 
 export function CustomersPage() {
-  const [showForm, setShowForm] = useState(false)
-  const [editing, setEditing] = useState<Customer | null>(null)
-  const [refresh, setRefresh] = useState(0)
-
-  const invalidate = () => {
-    customersPromise = customersApi.getAll()
-    setRefresh((n) => n + 1)
-  }
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
+    useEntityList<Customer>(customersApi.remove, () => { customersPromise = customersApi.getAll() })
 
   const handleSubmit = async (data: CustomerFormData) => {
-    if (editing) {
-      await customersApi.update(editing.id, data)
-    } else {
-      await customersApi.create(data)
-    }
-    setShowForm(false)
-    setEditing(null)
-    invalidate()
-  }
-
-  const handleEdit = (c: Customer) => {
-    setEditing(c)
-    setShowForm(true)
-  }
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Confirma exclusão do cliente? Todos os veículos vinculados serão removidos.')) return
-    await customersApi.remove(id)
-    invalidate()
+    if (editing) await customersApi.update(editing.id, data)
+    else await customersApi.create(data)
+    afterSubmit()
   }
 
   return (
@@ -114,11 +93,14 @@ export function CustomersPage() {
           <CustomerForm
             initialData={editing ?? undefined}
             onSubmit={handleSubmit}
-            onCancel={() => { setShowForm(false); setEditing(null) }}
+            onCancel={handleCancel}
           />
         </div>
       ) : (
-        <CustomersList onEdit={handleEdit} onDelete={handleDelete} />
+        <CustomersList
+          onEdit={handleEdit}
+          onDelete={(id) => handleDelete(id, 'Confirma exclusão do cliente? Todos os veículos vinculados serão removidos.')}
+        />
       )}
     </div>
   )
