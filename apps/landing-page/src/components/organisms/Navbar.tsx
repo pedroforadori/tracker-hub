@@ -3,6 +3,8 @@
 import { LogoMark } from '../atoms/LogoMark'
 import { useAppContext } from '../../context/AppContext'
 
+const WEB_APP_URL = process.env.NEXT_PUBLIC_WEB_URL ?? 'http://localhost:5173'
+
 const NAV_LINKS = [
   { label: 'Recursos', href: '#recursos' },
   { label: 'Como funciona', href: '#como-funciona' },
@@ -40,7 +42,7 @@ export function Navbar() {
 
         <div className="hidden items-center gap-2.5 lg:flex">
           <a
-            href="http://localhost:5173"
+            href={WEB_APP_URL}
             className="px-4 py-2.5 text-sm font-medium text-ink-2 transition-colors hover:text-ink"
           >
             Entrar
@@ -77,7 +79,7 @@ export function Navbar() {
             ))}
           </ul>
           <div className="mt-6 flex flex-col gap-3">
-            <a href="http://localhost:5173" className="text-sm text-ink-2 hover:text-ink">Entrar</a>
+            <a href={WEB_APP_URL} className="text-sm text-ink-2 hover:text-ink">Entrar</a>
             <a
               href="#trial"
               className="flex w-full items-center justify-center rounded-full bg-ink py-3 text-sm font-medium text-paper"
