@@ -12,5 +12,16 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    env: {
+      VITE_API_URL: 'http://localhost:3333',
+      VITE_STRIPE_PUBLISHABLE_KEY: 'pk_test_fake',
+    },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/test/**', 'src/main.tsx', 'src/**/*.d.ts'],
+      thresholds: { lines: 70, functions: 70, branches: 60 },
+    },
   },
 })
