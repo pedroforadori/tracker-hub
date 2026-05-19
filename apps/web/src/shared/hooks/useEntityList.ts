@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 export function useEntityList<T extends { id: string }>(
   removeFn: (id: string) => Promise<unknown>,
@@ -8,12 +8,12 @@ export function useEntityList<T extends { id: string }>(
   const [editing, setEditing] = useState<T | null>(null)
   const [refresh, setRefresh] = useState(0)
 
-  // Capture caller-provided functions in refs so callbacks below remain stable
+  // Update refs during render so callbacks always call the latest version,
   // even when callers pass new inline lambdas on every render.
   const removeFnRef = useRef(removeFn)
   const invalidatePromiseRef = useRef(invalidatePromise)
-  useEffect(() => { removeFnRef.current = removeFn }, [removeFn])
-  useEffect(() => { invalidatePromiseRef.current = invalidatePromise }, [invalidatePromise])
+  removeFnRef.current = removeFn
+  invalidatePromiseRef.current = invalidatePromise
 
   const invalidate = useCallback(() => {
     invalidatePromiseRef.current()
