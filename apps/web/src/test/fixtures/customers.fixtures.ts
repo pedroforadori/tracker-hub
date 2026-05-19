@@ -6,6 +6,8 @@ export const customer1: Customer = {
   cnpj: '11222333000181',
   email: 'silva@transportes.com',
   phone: '11999990001',
+  monthlyFee: 299.9,
+  status: 'ATIVO',
   tenantId: 'tenant-1',
   createdAt: '2025-01-01T00:00:00Z',
 }
@@ -16,6 +18,8 @@ export const customer2: Customer = {
   cnpj: '07526557000100',
   email: 'abc@logistica.com',
   phone: '11999990002',
+  monthlyFee: 199.9,
+  status: 'INATIVO',
   tenantId: 'tenant-1',
   createdAt: '2025-01-02T00:00:00Z',
 }

@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { FormField } from '@/components/molecules/FormField'
@@ -32,6 +33,7 @@ export function ChipForm({
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ChipFormData>({
     resolver: zodResolver(schema),
@@ -43,6 +45,12 @@ export function ChipForm({
       trackerId: initialData?.trackerId ?? '',
     },
   })
+
+  useEffect(() => {
+    if (trackers.length > 0 && initialData?.trackerId) {
+      setValue('trackerId', initialData.trackerId)
+    }
+  }, [trackers])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
