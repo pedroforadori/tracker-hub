@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { NumericFormat, PatternFormat } from 'react-number-format'
+import { NumericFormat } from 'react-number-format'
 import { z } from 'zod'
 import { FormField } from '@/components/molecules/FormField'
 import { FormActions } from '@/components/molecules/FormActions'
@@ -12,7 +13,9 @@ import { customersApi } from '../../customers/api/customers.api'
 import { cn } from '@/lib/utils'
 
 const schema = z.object({
-  plate: z.string().min(7, 'Placa inválida'),
+  plate: z
+    .string()
+    .regex(/^[A-Z]{3}-(\d{4}|\d[A-Z]\d{2})$/, 'Placa inválida (ex: ABC-1234 ou ABC-1D23)'),
   brand: f.name,
   model: f.name,
   year: f.year,
@@ -49,16 +52,25 @@ export function VehicleForm({ initialData, onSubmit, onCancel }: VehicleFormProp
     },
   })
 
+  useEffect(() => {
+    if (customers.length > 0 && initialData?.customerId) {
+      setValue('customerId', initialData.customerId)
+    }
+  }, [customers])
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <FormField label="Placa" htmlFor="plate" error={errors.plate?.message} required>
-        <PatternFormat
+        <input
           id="plate"
-          format="???-####"
-          mask="_"
+          placeholder="ABC-1234 ou ABC-1D23"
           defaultValue={initialData?.plate}
-          onValueChange={(v) => setValue('plate', v.formattedValue.toUpperCase(), { shouldValidate: true })}
-          placeholder="ABC-1D23"
+          onChange={(e) => {
+            const raw = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 7)
+            const formatted = raw.length > 3 ? `${raw.slice(0, 3)}-${raw.slice(3)}` : raw
+            e.target.value = formatted
+            setValue('plate', formatted, { shouldValidate: true })
+          }}
           className={cn(INPUT_BASE, 'uppercase')}
         />
       </FormField>
