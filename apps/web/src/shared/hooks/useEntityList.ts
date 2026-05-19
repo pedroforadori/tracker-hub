@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 export function useEntityList<T extends { id: string }>(
   removeFn: (id: string) => Promise<unknown>,
@@ -8,32 +8,39 @@ export function useEntityList<T extends { id: string }>(
   const [editing, setEditing] = useState<T | null>(null)
   const [refresh, setRefresh] = useState(0)
 
-  const invalidate = () => {
-    invalidatePromise()
-    setRefresh((n) => n + 1)
-  }
+  // Update refs during render so callbacks always call the latest version,
+  // even when callers pass new inline lambdas on every render.
+  const removeFnRef = useRef(removeFn)
+  const invalidatePromiseRef = useRef(invalidatePromise)
+  removeFnRef.current = removeFn
+  invalidatePromiseRef.current = invalidatePromise
 
-  const handleEdit = (item: T) => {
+  const invalidate = useCallback(() => {
+    invalidatePromiseRef.current()
+    setRefresh((n) => n + 1)
+  }, [])
+
+  const handleEdit = useCallback((item: T) => {
     setEditing(item)
     setShowForm(true)
-  }
+  }, [])
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setShowForm(false)
     setEditing(null)
-  }
+  }, [])
 
-  const afterSubmit = () => {
+  const afterSubmit = useCallback(() => {
     setShowForm(false)
     setEditing(null)
     invalidate()
-  }
+  }, [invalidate])
 
-  const handleDelete = async (id: string, confirmMessage = 'Confirma exclusão?') => {
+  const handleDelete = useCallback(async (id: string, confirmMessage = 'Confirma exclusão?') => {
     if (!window.confirm(confirmMessage)) return
-    await removeFn(id)
+    await removeFnRef.current(id)
     invalidate()
-  }
+  }, [invalidate])
 
   return { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, invalidate }
 }
