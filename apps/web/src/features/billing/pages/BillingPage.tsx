@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { BillingStatus } from '@/shared/types/api'
 import { billingApi } from '../api/billing.api'
 import { CardUpdateForm } from '../components/CardUpdateForm'
@@ -10,6 +10,8 @@ const statusLabel: Record<string, string> = {
   BLOCKED: 'Bloqueado',
   CANCELED: 'Cancelado',
 }
+
+const MS_PER_DAY = 86_400_000
 
 const statusColor: Record<string, string> = {
   ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300',
@@ -31,6 +33,26 @@ export function BillingPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const cardInfo = useMemo(() =>
+    status?.lastFour && status?.cardBrand
+      ? `${status.cardBrand.charAt(0).toUpperCase() + status.cardBrand.slice(1)} •••• ${status.lastFour}`
+      : 'Nenhum cartão cadastrado',
+  [status])
+
+  const trialDaysLeft = useMemo(() =>
+    status?.trialEndsAt
+      ? Math.max(0, Math.ceil((new Date(status.trialEndsAt).getTime() - Date.now()) / MS_PER_DAY))
+      : null,
+  [status?.trialEndsAt])
+
+  const graceDaysLeft = useMemo(() =>
+    status?.gracePeriodEndsAt
+      ? Math.max(0, Math.ceil((new Date(status.gracePeriodEndsAt).getTime() - Date.now()) / MS_PER_DAY))
+      : null,
+  [status?.gracePeriodEndsAt])
+
+  const handleShowForm = useCallback(() => setShowForm(true), [])
+
   if (loading) {
     return (
       <div className="flex h-40 items-center justify-center text-muted-foreground text-sm">
@@ -38,19 +60,6 @@ export function BillingPage() {
       </div>
     )
   }
-
-  const cardInfo =
-    status?.lastFour && status?.cardBrand
-      ? `${status.cardBrand.charAt(0).toUpperCase() + status.cardBrand.slice(1)} •••• ${status.lastFour}`
-      : 'Nenhum cartão cadastrado'
-
-  const trialDaysLeft = status?.trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(status.trialEndsAt).getTime() - Date.now()) / 86_400_000))
-    : null
-
-  const graceDaysLeft = status?.gracePeriodEndsAt
-    ? Math.max(0, Math.ceil((new Date(status.gracePeriodEndsAt).getTime() - Date.now()) / 86_400_000))
-    : null
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -95,7 +104,7 @@ export function BillingPage() {
 
         {!showForm ? (
           <button
-            onClick={() => setShowForm(true)}
+            onClick={handleShowForm}
             className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
           >
             {status?.lastFour ? 'Trocar cartão' : 'Adicionar cartão'}
