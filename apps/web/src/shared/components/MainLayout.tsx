@@ -7,6 +7,7 @@ import {
   Users,
   Car,
 } from 'lucide-react'
+import { useCallback } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { PaymentWarningBanner } from '@/features/billing/components/PaymentWarningBanner'
 import { ThemeToggle } from '@/components/atoms/ThemeToggle'
@@ -20,14 +21,22 @@ const navItems = [
   { to: '/chips', label: 'Chips', icon: Radio },
 ]
 
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+    isActive
+      ? 'bg-primary text-primary-foreground'
+      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+  )
+
 export function MainLayout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout()
     navigate('/login')
-  }
+  }, [logout, navigate])
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -39,18 +48,7 @@ export function MainLayout() {
 
         <nav className="flex-1 space-y-1 p-3">
           {navItems.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                )
-              }
-            >
+            <NavLink key={to} to={to} className={navLinkClass}>
               <Icon size={16} />
               {label}
             </NavLink>
@@ -58,31 +56,11 @@ export function MainLayout() {
 
           {user?.role === 'ADMIN' && (
             <>
-              <NavLink
-                to="/team"
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  )
-                }
-              >
+              <NavLink to="/team" className={navLinkClass}>
                 <Users size={16} />
                 Equipe
               </NavLink>
-              <NavLink
-                to="/billing"
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  )
-                }
-              >
+              <NavLink to="/billing" className={navLinkClass}>
                 <CreditCard size={16} />
                 Cobrança
               </NavLink>
