@@ -1,0 +1,197 @@
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { Test, TestingModule } from '@nestjs/testing';
+import { UserRole } from '@prisma/client';
+import { AuthService } from './auth.service';
+import { BillingService } from '../modules/billing/billing.service';
+import { PrismaService } from '../prisma/prisma.service';
+import * as passwordUtil from '../common/utils/password.util';
+
+jest.mock('../common/utils/password.util', () => ({
+  hashPassword: jest.fn().mockResolvedValue('hashed-password'),
+}));
+
+jest.mock('bcrypt', () => ({
+  compare: jest.fn(),
+  hash: jest.fn(),
+}));
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const bcrypt = require('bcrypt') as { compare: jest.Mock };
+
+const mockPrisma = {
+  user: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+  },
+  $transaction: jest.fn(),
+};
+
+const mockJwt = {
+  sign: jest.fn().mockReturnValue('signed-token'),
+};
+
+const mockBilling = {
+  createCustomerAndSubscription: jest.fn().mockResolvedValue(undefined),
+};
+
+const adminUser = {
+  id: 'user-1',
+  email: 'admin@test.com',
+  name: 'Admin',
+  role: UserRole.ADMIN,
+  tenantId: 'tenant-1',
+  password: 'hashed-password',
+};
+
+describe('AuthService', () => {
+  let service: AuthService;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: JwtService, useValue: mockJwt },
+        { provide: BillingService, useValue: mockBilling },
+      ],
+    }).compile();
+
+    service = module.get<AuthService>(AuthService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  describe('register()', () => {
+    const dto = { name: 'Admin', email: 'admin@test.com', password: 'Password1', tenantName: 'Acme' };
+
+    it('retorna accessToken e user quando o registro é bem-sucedido', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<typeof adminUser>) => {
+        const tx = {
+          tenant: { create: jest.fn().mockResolvedValue({ id: 'tenant-1' }) },
+          user: { create: jest.fn().mockResolvedValue(adminUser) },
+        };
+        return fn(tx as unknown as typeof mockPrisma);
+      });
+
+      const result = await service.register(dto);
+
+      expect(result).toEqual({
+        accessToken: 'signed-token',
+        user: { id: 'user-1', email: 'admin@test.com', role: UserRole.ADMIN, tenantId: 'tenant-1' },
+      });
+    });
+
+    it('lança ConflictException quando o e-mail já está cadastrado', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(adminUser);
+
+      await expect(service.register(dto)).rejects.toThrow(ConflictException);
+    });
+
+    it('hasheia a senha antes de criar o usuário', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<typeof adminUser>) => {
+        const tx = {
+          tenant: { create: jest.fn().mockResolvedValue({ id: 'tenant-1' }) },
+          user: { create: jest.fn().mockResolvedValue(adminUser) },
+        };
+        return fn(tx as unknown as typeof mockPrisma);
+      });
+
+      await service.register(dto);
+
+      expect(passwordUtil.hashPassword).toHaveBeenCalledWith('Password1');
+    });
+
+    it('retorna token mesmo se a criação do Stripe falhar', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<typeof adminUser>) => {
+        const tx = {
+          tenant: { create: jest.fn().mockResolvedValue({ id: 'tenant-1' }) },
+          user: { create: jest.fn().mockResolvedValue(adminUser) },
+        };
+        return fn(tx as unknown as typeof mockPrisma);
+      });
+      mockBilling.createCustomerAndSubscription.mockRejectedValue(new Error('Stripe error'));
+
+      const result = await service.register(dto);
+
+      expect(result.accessToken).toBe('signed-token');
+    });
+
+    it('faz retry do Stripe após 10s em caso de falha', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<typeof adminUser>) => {
+        const tx = {
+          tenant: { create: jest.fn().mockResolvedValue({ id: 'tenant-1' }) },
+          user: { create: jest.fn().mockResolvedValue(adminUser) },
+        };
+        return fn(tx as unknown as typeof mockPrisma);
+      });
+      mockBilling.createCustomerAndSubscription
+        .mockRejectedValueOnce(new Error('Transient error'))
+        .mockResolvedValueOnce(undefined);
+
+      await service.register(dto);
+
+      expect(mockBilling.createCustomerAndSubscription).toHaveBeenCalledTimes(1);
+
+      jest.advanceTimersByTime(10_001);
+      await Promise.resolve();
+
+      expect(mockBilling.createCustomerAndSubscription).toHaveBeenCalledTimes(2);
+    });
+
+    it('o payload do JWT contém sub, email, role e tenantId', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<typeof adminUser>) => {
+        const tx = {
+          tenant: { create: jest.fn().mockResolvedValue({ id: 'tenant-1' }) },
+          user: { create: jest.fn().mockResolvedValue(adminUser) },
+        };
+        return fn(tx as unknown as typeof mockPrisma);
+      });
+
+      await service.register(dto);
+
+      expect(mockJwt.sign).toHaveBeenCalledWith(
+        expect.objectContaining({ sub: 'user-1', email: 'admin@test.com', role: UserRole.ADMIN, tenantId: 'tenant-1' }),
+      );
+    });
+  });
+
+  describe('login()', () => {
+    const dto = { email: 'admin@test.com', password: 'Password1' };
+
+    it('retorna accessToken e user com credenciais corretas', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(adminUser);
+      bcrypt.compare.mockResolvedValue(true);
+
+      const result = await service.login(dto);
+
+      expect(result).toEqual({
+        accessToken: 'signed-token',
+        user: { id: 'user-1', email: 'admin@test.com', role: UserRole.ADMIN, tenantId: 'tenant-1' },
+      });
+    });
+
+    it('lança UnauthorizedException quando o usuário não existe', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('lança UnauthorizedException quando a senha está errada', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(adminUser);
+      bcrypt.compare.mockResolvedValue(false);
+
+      await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+});
