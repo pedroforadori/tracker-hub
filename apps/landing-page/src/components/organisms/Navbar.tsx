@@ -8,7 +8,7 @@ const WEB_APP_URL = process.env.NEXT_PUBLIC_WEB_URL ?? 'http://localhost:5173'
 const NAV_LINKS = [
   { label: 'Recursos', href: '#recursos' },
   { label: 'Como funciona', href: '#como-funciona' },
-  { label: 'Preços', href: '#precos' },
+  { label: 'Preços', href: '#contato' },
   { label: 'Clientes', href: '#clientes' },
 ]
 
