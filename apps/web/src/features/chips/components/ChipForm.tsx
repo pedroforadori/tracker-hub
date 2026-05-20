@@ -51,7 +51,7 @@ export function ChipForm({
     if (trackers.length > 0 && initialData?.trackerId) {
       setValue('trackerId', initialData.trackerId)
     }
-  }, [trackers])
+  }, [trackers, initialData, setValue])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>

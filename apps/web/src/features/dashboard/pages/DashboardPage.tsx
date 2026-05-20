@@ -25,7 +25,7 @@ function buildChartData(customers: Customer[], months = 7) {
     const monthEnd = new Date(now.getFullYear(), now.getMonth() - offset + 1, 0)
     const label = new Date(now.getFullYear(), now.getMonth() - offset, 1).toLocaleDateString('pt-BR', { month: 'short' })
     const mrr = customers
-      .filter(c => new Date(c.createdAt) <= monthEnd)
+      .filter(c => c.status === 'ATIVO' && new Date(c.createdAt) <= monthEnd)
       .reduce((sum, c) => sum + Number(c.monthlyFee), 0)
     return { month: label.charAt(0).toUpperCase() + label.slice(1, 3), mrr }
   })
@@ -88,7 +88,7 @@ function MrrChart({ data }: { data: { month: string; mrr: number }[] }) {
   return (
     <div className="rounded-xl border border-border bg-card p-6">
       <h2 className="text-base font-semibold">Crescimento de Escala</h2>
-      <p className="mt-1 text-xs text-muted-foreground">Projeção dinâmica de MRR em tempo real</p>
+      <p className="mt-1 text-xs text-muted-foreground">MRR acumulado de clientes ativos</p>
       <div className="mt-6 h-56">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
@@ -235,7 +235,7 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
         <MrrChart data={chartData} />
-        <FinancialHealth receita={mrr} fluxo={totalMrr} />
+        <FinancialHealth receita={mrr} fluxo={totalMrr - mrr} />
       </div>
     </div>
   )
