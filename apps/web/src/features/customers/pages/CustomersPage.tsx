@@ -3,23 +3,23 @@ import { use, useState } from 'react'
 import { Switch } from '@/components/atoms/Switch'
 import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Customer, CustomerStatus } from '@/shared/types/api'
-import { getCustomersPromise, invalidateCustomers } from '@/shared/store/entityPromises'
+import { getCustomersPromise, invalidateCustomers, patchCustomerStatus } from '@/shared/store/entityPromises'
 import { customersApi } from '../api/customers.api'
 import { CustomerForm, type CustomerFormData } from '../components/CustomerForm'
 
 function CustomersList({
+  customers,
+  pendingIds,
   onEdit,
   onDelete,
   onStatusChange,
-  statusOverrides,
 }: {
+  customers: Customer[]
+  pendingIds: Set<string>
   onEdit: (c: Customer) => void
   onDelete: (id: string) => void
   onStatusChange: (id: string, status: CustomerStatus) => void
-  statusOverrides: Record<string, CustomerStatus>
 }) {
-  const customers = use(getCustomersPromise())
-
   if (!customers.length) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
@@ -42,8 +42,7 @@ function CustomersList({
         </thead>
         <tbody>
           {customers.map((c) => {
-            const displayStatus = statusOverrides[c.id] ?? c.status
-            const isAtivo = displayStatus === 'ATIVO'
+            const isAtivo = c.status === 'ATIVO'
             return (
               <tr key={c.id} className="border-b border-border hover:bg-muted/30">
                 <td className="py-3 pr-4 font-medium">{c.name}</td>
@@ -55,6 +54,7 @@ function CustomersList({
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={isAtivo}
+                      disabled={pendingIds.has(c.id)}
                       onChange={(checked) => onStatusChange(c.id, checked ? 'ATIVO' : 'INATIVO')}
                     />
                     <span className="text-xs text-muted-foreground">{isAtivo ? 'Ativo' : 'Inativo'}</span>
@@ -80,13 +80,20 @@ function CustomersList({
 }
 
 export function CustomersPage() {
+  const serverCustomers = use(getCustomersPromise())
   const [statusOverrides, setStatusOverrides] = useState<Record<string, CustomerStatus>>({})
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
 
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
+  const { showForm, setShowForm, editing, setEditing, handleEdit, handleCancel, afterSubmit, handleDelete } =
     useEntityList<Customer>(customersApi.remove, () => {
       invalidateCustomers()
       setStatusOverrides({})
     })
+
+  const customers = serverCustomers.map((c) => ({
+    ...c,
+    status: statusOverrides[c.id] ?? c.status,
+  }))
 
   const handleSubmit = async (data: CustomerFormData) => {
     if (editing) await customersApi.update(editing.id, data)
@@ -96,20 +103,20 @@ export function CustomersPage() {
 
   const handleStatusChange = async (id: string, status: CustomerStatus) => {
     setStatusOverrides(prev => ({ ...prev, [id]: status }))
+    setPendingIds(prev => new Set(prev).add(id))
     try {
       await customersApi.update(id, { status })
-      invalidateCustomers()
+      patchCustomerStatus(id, status)
+      setStatusOverrides(prev => { const n = { ...prev }; delete n[id]; return n })
     } catch {
-      setStatusOverrides(prev => {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      })
+      setStatusOverrides(prev => { const n = { ...prev }; delete n[id]; return n })
+    } finally {
+      setPendingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
   }
 
   return (
-    <div className="space-y-6" key={refresh}>
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Clientes</h1>
         {!showForm && (
@@ -135,10 +142,11 @@ export function CustomersPage() {
         </div>
       ) : (
         <CustomersList
+          customers={customers}
+          pendingIds={pendingIds}
           onEdit={handleEdit}
           onDelete={(id) => handleDelete(id, 'Confirma exclusão do cliente? Todos os veículos vinculados serão removidos.')}
           onStatusChange={handleStatusChange}
-          statusOverrides={statusOverrides}
         />
       )}
     </div>

@@ -13,6 +13,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { PaymentWarningBanner } from '@/features/billing/components/PaymentWarningBanner'
 import { ThemeToggle } from '@/components/atoms/ThemeToggle'
 import { cn } from '@/lib/utils'
+import { clearAllCaches } from '../store/entityPromises'
 import { useAuthStore } from '../store/authStore'
 
 const navItems = [
@@ -36,6 +37,7 @@ export function MainLayout() {
   const navigate = useNavigate()
 
   const handleLogout = useCallback(() => {
+    clearAllCaches()
     logout()
     navigate('/login')
   }, [logout, navigate])
