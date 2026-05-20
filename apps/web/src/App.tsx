@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@/components/atoms/ThemeProvider'
 import { BillingGate } from '@/features/billing/components/BillingGate'
 import { TableSkeleton } from '@/shared/components/LoadingSkeleton'
+import { DashboardSkeleton } from './features/dashboard/components/DashboardSkeleton'
 import { MainLayout } from '@/shared/components/MainLayout'
 import { ProtectedRoute } from '@/shared/components/ProtectedRoute'
 import { LoginPage } from './features/auth/pages/LoginPage'
@@ -44,7 +45,7 @@ function App() {
                 <Route
                   path="/dashboard"
                   element={
-                    <Suspense fallback={<TableSkeleton />}>
+                    <Suspense fallback={<DashboardSkeleton />}>
                       <DashboardPage />
                     </Suspense>
                   }

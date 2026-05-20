@@ -52,7 +52,7 @@ export function TrackerForm({
     if (vehicles.length > 0 && initialData?.vehicleId) {
       setValue('vehicleId', initialData.vehicleId)
     }
-  }, [vehicles])
+  }, [vehicles, initialData, setValue])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>

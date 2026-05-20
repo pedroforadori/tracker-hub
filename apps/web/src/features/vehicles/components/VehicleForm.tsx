@@ -56,7 +56,7 @@ export function VehicleForm({ initialData, onSubmit, onCancel }: VehicleFormProp
     if (customers.length > 0 && initialData?.customerId) {
       setValue('customerId', initialData.customerId)
     }
-  }, [customers])
+  }, [customers, initialData, setValue])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
