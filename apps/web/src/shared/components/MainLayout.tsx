@@ -1,6 +1,7 @@
 import {
   CreditCard,
   Cpu,
+  LayoutDashboard,
   LogOut,
   MapPin,
   Radio,
@@ -15,10 +16,11 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '../store/authStore'
 
 const navItems = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/customers', label: 'Clientes', icon: Users },
   { to: '/vehicles', label: 'Veículos', icon: Car },
   { to: '/trackers', label: 'Rastreadores', icon: MapPin },
-  { to: '/chips', label: 'Chips', icon: Radio },
+  { to: '/chips', label: 'SIM Cards', icon: Radio },
 ]
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>

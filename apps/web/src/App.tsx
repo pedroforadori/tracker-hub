@@ -7,6 +7,9 @@ import { MainLayout } from '@/shared/components/MainLayout'
 import { ProtectedRoute } from '@/shared/components/ProtectedRoute'
 import { LoginPage } from './features/auth/pages/LoginPage'
 
+const DashboardPage = lazy(() =>
+  import('./features/dashboard/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+)
 const CustomersPage = lazy(() =>
   import('./features/customers/pages/CustomersPage').then((m) => ({ default: m.CustomersPage })),
 )
@@ -36,8 +39,16 @@ function App() {
 
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
-                <Route index element={<Navigate to="/customers" replace />} />
+                <Route index element={<Navigate to="/dashboard" replace />} />
 
+                <Route
+                  path="/dashboard"
+                  element={
+                    <Suspense fallback={<TableSkeleton />}>
+                      <DashboardPage />
+                    </Suspense>
+                  }
+                />
                 <Route
                   path="/customers"
                   element={

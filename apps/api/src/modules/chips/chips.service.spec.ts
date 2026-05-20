@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
 import { ChipsService } from './chips.service';
@@ -7,6 +7,7 @@ import { ChipsRepository } from './chips.repository';
 const mockRepo = {
   findAll: jest.fn(),
   findOne: jest.fn(),
+  findByTrackerId: jest.fn(),
   create: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
@@ -58,11 +59,19 @@ describe('ChipsService', () => {
   });
 
   describe('create()', () => {
-    it('delega ao repo.create com dto e tenantId', async () => {
+    const dto = { iccid: '89550534000000000001', phoneNumber: '11999990001', provider: 'Vivo', trackerId: 'trk-1' };
+
+    it('delega ao repo.create quando rastreador está disponível', async () => {
+      mockRepo.findByTrackerId.mockResolvedValue(null);
       mockRepo.create.mockResolvedValue(chipEntity);
-      const dto = { iccid: '89550534000000000001', phoneNumber: '11999990001', provider: 'Vivo', trackerId: 'trk-1' };
       await service.create(dto, currentUser);
       expect(mockRepo.create).toHaveBeenCalledWith(dto, 'tenant-1');
+    });
+
+    it('lança ConflictException quando rastreador já possui chip', async () => {
+      mockRepo.findByTrackerId.mockResolvedValue(chipEntity);
+      await expect(service.create(dto, currentUser)).rejects.toThrow(ConflictException);
+      expect(mockRepo.create).not.toHaveBeenCalled();
     });
   });
 
@@ -81,6 +90,24 @@ describe('ChipsService', () => {
       mockRepo.findOne.mockResolvedValue(null);
       await expect(service.update('ghost', {}, currentUser)).rejects.toThrow(NotFoundException);
       expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('lança ConflictException ao tentar mudar para rastreador já ocupado', async () => {
+      const otherChip = { ...chipEntity, id: 'chip-2' };
+      mockRepo.findOne.mockResolvedValue(chipEntity);
+      mockRepo.findByTrackerId.mockResolvedValue(otherChip);
+
+      await expect(service.update('chip-1', { trackerId: 'trk-2' }, currentUser)).rejects.toThrow(ConflictException);
+      expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('permite atualizar mantendo o mesmo trackerId', async () => {
+      mockRepo.findOne.mockResolvedValue(chipEntity);
+      mockRepo.findByTrackerId.mockResolvedValue(chipEntity); // mesmo chip
+      mockRepo.update.mockResolvedValue(chipEntity);
+
+      await service.update('chip-1', { trackerId: 'trk-1', provider: 'Tim' }, currentUser);
+      expect(mockRepo.update).toHaveBeenCalled();
     });
   });
 
