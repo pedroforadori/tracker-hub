@@ -45,3 +45,8 @@ export function patchCustomerStatus(id: string, status: CustomerStatus) {
   if (_customers?.status !== 'fulfilled' || !_customers.value) return
   _customers = resolvedThenable(_customers.value.map((c) => (c.id === id ? { ...c, status } : c)))
 }
+
+export function clearAllCaches() {
+  _customers = null
+  _vehicles = null
+}
