@@ -1,9 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { cn } from '@/lib/utils'
+import { INPUT_BASE } from '@/shared/constants/styles'
 import { f } from '@/shared/schemas/fields'
 import { useAuthStore } from '@/shared/store/authStore'
 import { useBillingStore } from '@/shared/store/billingStore'
@@ -17,16 +19,12 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>
 
-const inputBase = cn(
-  'w-full rounded-md border border-input bg-background px-3 py-2 text-sm',
-  'focus:outline-none focus:ring-2 focus:ring-ring',
-  'disabled:opacity-50',
-)
 
 export function LoginPage() {
   const { login } = useAuthStore()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -85,7 +83,7 @@ export function LoginPage() {
               type="email"
               {...register('email')}
               placeholder="admin@empresa.com"
-              className={inputBase}
+              className={INPUT_BASE}
             />
             {errors.email && (
               <p role="alert" className="text-xs text-destructive">{errors.email.message}</p>
@@ -96,13 +94,27 @@ export function LoginPage() {
             <label htmlFor="password" className="text-sm font-medium text-foreground">
               Senha
             </label>
-            <input
-              id="password"
-              type="password"
-              {...register('password')}
-              placeholder="••••••"
-              className={inputBase}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                {...register('password')}
+                placeholder="••••••"
+                className={cn(INPUT_BASE, 'pr-10')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className={cn(
+                  'absolute right-3 top-1/2 -translate-y-1/2',
+                  'cursor-pointer text-muted-foreground hover:text-foreground',
+                )}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
             {errors.password && (
               <p role="alert" className="text-xs text-destructive">{errors.password.message}</p>
             )}

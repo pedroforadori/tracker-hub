@@ -24,7 +24,7 @@ function renderLoginPage() {
 async function fillAndSubmit(email: string, password: string) {
   const user = userEvent.setup()
   await user.type(screen.getByLabelText(/e-mail/i), email)
-  await user.type(screen.getByLabelText(/senha/i), password)
+  await user.type(screen.getByLabelText('Senha'), password)
   await user.click(screen.getByRole('button', { name: /entrar/i }))
 }
 
@@ -32,7 +32,7 @@ describe('LoginPage', () => {
   it('renderiza campos e botão', () => {
     renderLoginPage()
     expect(screen.getByLabelText(/e-mail/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/senha/i)).toBeInTheDocument()
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument()
   })
 
@@ -87,6 +87,29 @@ describe('LoginPage', () => {
     await waitFor(() => expect(useBillingStore.getState().isPastDue).toBe(true))
   })
 
+  it('toggle mostra e oculta a senha', async () => {
+    const user = userEvent.setup()
+    renderLoginPage()
+
+    const input = screen.getByLabelText('Senha') as HTMLInputElement
+    const toggleBtn = screen.getByRole('button', { name: /mostrar senha/i })
+
+    expect(input.type).toBe('password')
+
+    await user.click(toggleBtn)
+    expect(input.type).toBe('text')
+    expect(screen.getByRole('button', { name: /ocultar senha/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /ocultar senha/i }))
+    expect(input.type).toBe('password')
+    expect(screen.getByRole('button', { name: /mostrar senha/i })).toBeInTheDocument()
+  })
+
+  it('botão de toggle tem tabIndex={-1}', () => {
+    renderLoginPage()
+    expect(screen.getByRole('button', { name: /mostrar senha/i })).toHaveAttribute('tabIndex', '-1')
+  })
+
   it('durante submit → botão "Entrando..." e desabilitado', async () => {
     let resolveLogin!: (v: unknown) => void
     server.use(
@@ -96,7 +119,7 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     renderLoginPage()
     await user.type(screen.getByLabelText(/e-mail/i), 'admin@test.com')
-    await user.type(screen.getByLabelText(/senha/i), 'Senha123')
+    await user.type(screen.getByLabelText('Senha'), 'Senha123')
     user.click(screen.getByRole('button', { name: /entrar/i }))
 
     await waitFor(() => expect(screen.getByRole('button', { name: /entrando/i })).toBeDisabled())

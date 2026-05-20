@@ -30,7 +30,7 @@ describe('Fluxo de login', () => {
     renderApp('/login')
 
     await user.type(screen.getByLabelText(/e-mail/i), 'admin@test.com')
-    await user.type(screen.getByLabelText(/senha/i), 'Senha123')
+    await user.type(screen.getByLabelText('Senha'), 'Senha123')
     await user.click(screen.getByRole('button', { name: /entrar/i }))
 
     await waitFor(() => expect(screen.getByText('dashboard')).toBeInTheDocument())
@@ -55,7 +55,7 @@ describe('Fluxo de login', () => {
     renderApp('/login')
 
     await user.type(screen.getByLabelText(/e-mail/i), 'admin@test.com')
-    await user.type(screen.getByLabelText(/senha/i), 'senhaerrada')
+    await user.type(screen.getByLabelText('Senha'), 'senhaerrada')
     await user.click(screen.getByRole('button', { name: /entrar/i }))
 
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
