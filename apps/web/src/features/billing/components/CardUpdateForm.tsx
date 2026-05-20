@@ -4,7 +4,9 @@ import { useState } from 'react'
 import { useBillingStore } from '@/shared/store/billingStore'
 import { billingApi } from '../api/billing.api'
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? '')
+const stripePromise = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+  : null
 
 function CardForm() {
   const stripe = useStripe()

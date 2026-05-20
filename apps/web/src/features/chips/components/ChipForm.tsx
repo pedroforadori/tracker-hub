@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { FormField } from '@/components/molecules/FormField'
@@ -28,10 +29,12 @@ export function ChipForm({
 }) {
   const isEditing = !!initialData?.id
   const trackers = useRelatedEntities<Tracker>(trackersApi.getAll)
+  const availableTrackers = trackers.filter(t => !t.chip || t.id === initialData?.trackerId)
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ChipFormData>({
     resolver: zodResolver(schema),
@@ -43,6 +46,12 @@ export function ChipForm({
       trackerId: initialData?.trackerId ?? '',
     },
   })
+
+  useEffect(() => {
+    if (trackers.length > 0 && initialData?.trackerId) {
+      setValue('trackerId', initialData.trackerId)
+    }
+  }, [trackers, initialData, setValue])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
@@ -61,7 +70,7 @@ export function ChipForm({
       <FormField label="Rastreador" htmlFor="trackerId" error={errors.trackerId?.message} required>
         <select id="trackerId" {...register('trackerId')} className={INPUT_BASE}>
           <option value="">Selecione um rastreador</option>
-          {trackers.map((t) => (
+          {availableTrackers.map((t) => (
             <option key={t.id} value={t.id}>{t.imei} — {t.brand} {t.model}</option>
           ))}
         </select>

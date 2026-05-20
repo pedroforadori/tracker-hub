@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CurrentUser } from '../../common/types/current-user.type';
 import { CreateChipDto } from './dto/create-chip.dto';
 import { UpdateChipDto } from './dto/update-chip.dto';
@@ -16,10 +16,19 @@ export class ChipsService {
     return chip;
   }
 
-  create(dto: CreateChipDto, user: CurrentUser) { return this.repo.create(dto, user.tenantId); }
+  async create(dto: CreateChipDto, user: CurrentUser) {
+    const existing = await this.repo.findByTrackerId(dto.trackerId, user.tenantId);
+    if (existing) throw new ConflictException('Este rastreador já possui um chip vinculado');
+    return this.repo.create(dto, user.tenantId);
+  }
 
   async update(id: string, dto: UpdateChipDto, user: CurrentUser) {
     await this.findOne(id, user);
+    if (dto.trackerId) {
+      const conflict = await this.repo.findByTrackerId(dto.trackerId, user.tenantId);
+      if (conflict && conflict.id !== id)
+        throw new ConflictException('Este rastreador já possui um chip vinculado');
+    }
     return this.repo.update(id, user.tenantId, dto);
   }
 
