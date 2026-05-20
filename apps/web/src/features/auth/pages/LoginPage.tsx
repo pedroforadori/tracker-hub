@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -27,6 +28,7 @@ export function LoginPage() {
   const { login } = useAuthStore()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -96,13 +98,24 @@ export function LoginPage() {
             <label htmlFor="password" className="text-sm font-medium text-foreground">
               Senha
             </label>
-            <input
-              id="password"
-              type="password"
-              {...register('password')}
-              placeholder="••••••"
-              className={inputBase}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                {...register('password')}
+                placeholder="••••••"
+                className={cn(inputBase, 'pr-10')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
             {errors.password && (
               <p role="alert" className="text-xs text-destructive">{errors.password.message}</p>
             )}
