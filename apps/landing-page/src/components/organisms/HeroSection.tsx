@@ -35,10 +35,10 @@ export function HeroSection() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a
-              href="#trial"
+              href="#contato"
               className="inline-flex items-center gap-2 rounded-full bg-amber-deep px-5 py-3.5 text-base font-medium text-paper transition-all hover:-translate-y-px hover:opacity-90"
             >
-              Testar 14 dias grátis <span className="font-display italic">→</span>
+              Contratar agora <span className="font-display italic">→</span>
             </a>
             <a
               href="#demo"

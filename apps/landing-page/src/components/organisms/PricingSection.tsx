@@ -12,8 +12,8 @@ const plans = [
       'Telemetria a cada 60s',
       'Suporte por e-mail',
     ],
-    cta: 'Começar com Cabine',
-    ctaHref: '#trial',
+    cta: 'Contratar Cabine',
+    ctaHref: '#contato',
   },
   {
     tag: 'Recomendado',
@@ -29,8 +29,8 @@ const plans = [
       'API + Webhooks ilimitados',
       'Suporte prioritário',
     ],
-    cta: 'Começar 14 dias grátis',
-    ctaHref: '#trial',
+    cta: 'Contratar Carreta',
+    ctaHref: '#contato',
   },
   {
     tag: 'Escala',
