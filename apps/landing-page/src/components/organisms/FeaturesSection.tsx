@@ -18,7 +18,7 @@ export function FeaturesSection() {
     <section id="recursos" className="px-8 py-24 lg:px-22 lg:py-28">
       <div className="mb-12 flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-widest text-ink-3">Módulos · 06</p>
+          <p className="font-mono text-[11px] uppercase tracking-widest text-ink-3">Módulos</p>
           <h2 className="mt-3 max-w-2xl font-display text-5xl leading-tight tracking-tight lg:text-7xl">
             Tudo que sua transportadora precisa,{' '}
             <em className="italic text-amber-deep">e nada que ela não precisa</em>.
