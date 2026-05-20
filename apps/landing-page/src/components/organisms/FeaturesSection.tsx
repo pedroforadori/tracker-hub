@@ -79,7 +79,7 @@ export function FeaturesSection() {
         </div>
 
         {/* 03 Chips */}
-        <div className="rounded-2xl border border-line bg-paper p-6 lg:col-span-4">
+        <div className="rounded-2xl border border-line bg-paper p-6 lg:col-span-6">
           <p className="font-mono text-[10px] uppercase tracking-widest text-ink-3">03 · Chips</p>
           <h3 className="mt-2.5 font-display text-3xl font-normal leading-tight">
             1 chip por rastreador, vinculado para sempre.
@@ -96,7 +96,7 @@ export function FeaturesSection() {
         </div>
 
         {/* 04 Clientes */}
-        <div className="rounded-2xl border border-line bg-paper p-6 lg:col-span-4">
+        <div className="rounded-2xl border border-line bg-paper p-6 lg:col-span-6">
           <p className="font-mono text-[10px] uppercase tracking-widest text-ink-3">04 · Clientes</p>
           <h3 className="mt-2.5 font-display text-3xl font-normal leading-tight">
             CNPJ, contato e responsável — com máscara.
@@ -116,7 +116,7 @@ export function FeaturesSection() {
         </div>
 
         {/* 05 Equipe */}
-        <div className="rounded-2xl p-6 lg:col-span-4" style={{ background: 'linear-gradient(135deg, oklch(0.78 0.13 60), oklch(0.65 0.16 45))' }}>
+        <div className="rounded-2xl p-6 lg:col-span-6" style={{ background: 'linear-gradient(135deg, oklch(0.78 0.13 60), oklch(0.65 0.16 45))' }}>
           <p className="font-mono text-[10px] uppercase tracking-widest text-[rgba(26,18,8,0.6)]">05 · Equipe</p>
           <h3 className="mt-2.5 font-display text-3xl font-normal leading-tight text-[#1a1208]">
             Até 3 operadores por conta — sem dor.
@@ -159,25 +159,6 @@ export function FeaturesSection() {
             <div className="relative grid size-14 place-items-center rounded-2xl bg-amber font-display text-2xl italic text-ink">
               🔐
             </div>
-          </div>
-        </div>
-
-        {/* 07 API REST */}
-        <div className="rounded-2xl border border-line bg-paper p-6 lg:col-span-6">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-ink-3">07 · API REST</p>
-          <h3 className="mt-2.5 font-display text-3xl font-normal leading-tight">
-            Documentação Swagger pronta — integre em 1 tarde.
-          </h3>
-          <p className="mt-2 text-sm text-ink-2">
-            Todos os módulos expostos como REST, autenticação Bearer e webhooks para eventos da operação.
-          </p>
-          <div className="mt-5 rounded-xl bg-[#1a1208] p-4 font-mono text-xs leading-relaxed text-[#E8DFC9]">
-            <span className="text-amber-deep">POST</span> /api/vehicles<br />
-            <span className="text-ink-3">Authorization: Bearer ••••</span><br />
-            <span className="text-ink-3">{'{'}</span><br />
-            &nbsp;&nbsp;<span className="text-brand-green">&quot;plate&quot;</span>: <span>&quot;RIO-2841&quot;</span>,<br />
-            &nbsp;&nbsp;<span className="text-brand-green">&quot;customerId&quot;</span>: <span>&quot;clx_...&quot;</span><br />
-            <span className="text-ink-3">{'}'}</span> <span className="text-brand-green">→ 201</span>
           </div>
         </div>
       </div>
