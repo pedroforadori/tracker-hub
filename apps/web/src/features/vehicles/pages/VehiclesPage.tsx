@@ -1,13 +1,12 @@
 import { use } from 'react'
 import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Vehicle } from '@/shared/types/api'
+import { getVehiclesPromise, invalidateVehicles } from '@/shared/store/entityPromises'
 import { vehiclesApi } from '../api/vehicles.api'
 import { VehicleForm, type VehicleFormData } from '../components/VehicleForm'
 
-let vehiclesPromise = vehiclesApi.getAll()
-
 function VehiclesList({ onEdit, onDelete }: { onEdit: (v: Vehicle) => void; onDelete: (id: string) => void }) {
-  const vehicles = use(vehiclesPromise)
+  const vehicles = use(getVehiclesPromise())
 
   if (!vehicles.length) {
     return <div className="py-12 text-center text-sm text-muted-foreground">Nenhum veículo cadastrado.</div>
@@ -46,7 +45,7 @@ function VehiclesList({ onEdit, onDelete }: { onEdit: (v: Vehicle) => void; onDe
 
 export function VehiclesPage() {
   const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
-    useEntityList<Vehicle>(vehiclesApi.remove, () => { vehiclesPromise = vehiclesApi.getAll() })
+    useEntityList<Vehicle>(vehiclesApi.remove, () => { invalidateVehicles() })
 
   const handleSubmit = async (data: VehicleFormData) => {
     if (editing) await vehiclesApi.update(editing.id, data)

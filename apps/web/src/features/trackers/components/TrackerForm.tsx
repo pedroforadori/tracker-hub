@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { NumericFormat } from 'react-number-format'
 import { z } from 'zod'
@@ -46,6 +47,12 @@ export function TrackerForm({
       vehicleId: initialData?.vehicleId ?? '',
     },
   })
+
+  useEffect(() => {
+    if (vehicles.length > 0 && initialData?.vehicleId) {
+      setValue('vehicleId', initialData.vehicleId)
+    }
+  }, [vehicles, initialData, setValue])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>

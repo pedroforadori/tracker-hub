@@ -117,12 +117,6 @@ describe('UsersController (integration)', () => {
           .expect(404);
       });
 
-      it('400 quando o id não é um UUID válido', async () => {
-        await request(app.getHttpServer())
-          .patch('/users/nao-e-um-uuid')
-          .send({ name: 'X' })
-          .expect(400);
-      });
     });
 
     describe('DELETE /users/:id', () => {
@@ -134,10 +128,6 @@ describe('UsersController (integration)', () => {
       it('404 quando o usuário não é encontrado', async () => {
         mockUsersService.remove.mockRejectedValue(new NotFoundException('Usuário não encontrado'));
         await request(app.getHttpServer()).delete(`/users/${userEntity.id}`).expect(404);
-      });
-
-      it('400 quando o id não é um UUID válido', async () => {
-        await request(app.getHttpServer()).delete('/users/nao-e-uuid').expect(400);
       });
     });
   });

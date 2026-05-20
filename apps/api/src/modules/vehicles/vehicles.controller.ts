@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUserDecorator } from '../../common/decorators/current-user.decorator';
 import type { CurrentUser } from '../../common/types/current-user.type';
@@ -18,7 +18,7 @@ export class VehiclesController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Buscar veículo por ID' })
-  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUserDecorator() user: CurrentUser) {
+  findOne(@Param('id') id: string, @CurrentUserDecorator() user: CurrentUser) {
     return this.service.findOne(id, user);
   }
 
@@ -30,13 +30,13 @@ export class VehiclesController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualizar veículo' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateVehicleDto, @CurrentUserDecorator() user: CurrentUser) {
+  update(@Param('id') id: string, @Body() dto: UpdateVehicleDto, @CurrentUserDecorator() user: CurrentUser) {
     return this.service.update(id, dto, user);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Remover veículo' })
-  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUserDecorator() user: CurrentUser) {
+  remove(@Param('id') id: string, @CurrentUserDecorator() user: CurrentUser) {
     return this.service.remove(id, user);
   }
 }

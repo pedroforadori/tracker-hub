@@ -30,10 +30,11 @@ describe('MainLayout', () => {
   it('exibe links de navegação básicos para todos os usuários', () => {
     authenticateAsAdmin()
     renderLayout()
+    expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /clientes/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /veículos/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /rastreadores/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /chips/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /sim cards/i })).toBeInTheDocument()
   })
 
   it('ADMIN → exibe links "Equipe" e "Cobrança"', () => {
