@@ -1,4 +1,4 @@
-import { use } from 'react'
+import { use, useState } from 'react'
 import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Chip } from '@/shared/types/api'
 import { chipsApi } from '../api/chips.api'
@@ -43,13 +43,26 @@ function ChipsList({ onEdit, onDelete }: { onEdit: (c: Chip) => void; onDelete: 
 }
 
 export function ChipsPage() {
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
+  const [serverError, setServerError] = useState('')
+
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel: baseHandleCancel, afterSubmit, handleDelete } =
     useEntityList<Chip>(chipsApi.remove, () => { chipsPromise = chipsApi.getAll() })
 
+  const handleCancel = () => {
+    setServerError('')
+    baseHandleCancel()
+  }
+
   const handleSubmit = async (data: ChipFormData) => {
-    if (editing) await chipsApi.update(editing.id, data)
-    else await chipsApi.create(data)
-    afterSubmit()
+    setServerError('')
+    try {
+      if (editing) await chipsApi.update(editing.id, data)
+      else await chipsApi.create(data)
+      afterSubmit()
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setServerError(msg ?? 'Erro ao salvar chip. Tente novamente.')
+    }
   }
 
   return (
@@ -67,6 +80,11 @@ export function ChipsPage() {
       {showForm ? (
         <div className="rounded-lg border border-border p-6">
           <h2 className="mb-4 text-base font-medium">{editing ? 'Editar Chip' : 'Novo Chip'}</h2>
+          {serverError && (
+            <div role="alert" className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              {serverError}
+            </div>
+          )}
           <ChipForm initialData={editing ?? undefined} onSubmit={handleSubmit} onCancel={handleCancel} />
         </div>
       ) : (

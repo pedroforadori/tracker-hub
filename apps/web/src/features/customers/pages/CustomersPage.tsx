@@ -3,10 +3,9 @@ import { use, useState } from 'react'
 import { Switch } from '@/components/atoms/Switch'
 import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Customer, CustomerStatus } from '@/shared/types/api'
+import { getCustomersPromise, invalidateCustomers } from '@/shared/store/entityPromises'
 import { customersApi } from '../api/customers.api'
 import { CustomerForm, type CustomerFormData } from '../components/CustomerForm'
-
-let customersPromise = customersApi.getAll()
 
 function CustomersList({
   onEdit,
@@ -19,7 +18,7 @@ function CustomersList({
   onStatusChange: (id: string, status: CustomerStatus) => void
   statusOverrides: Record<string, CustomerStatus>
 }) {
-  const customers = use(customersPromise)
+  const customers = use(getCustomersPromise())
 
   if (!customers.length) {
     return (
@@ -85,7 +84,7 @@ export function CustomersPage() {
 
   const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
     useEntityList<Customer>(customersApi.remove, () => {
-      customersPromise = customersApi.getAll()
+      invalidateCustomers()
       setStatusOverrides({})
     })
 
@@ -99,6 +98,7 @@ export function CustomersPage() {
     setStatusOverrides(prev => ({ ...prev, [id]: status }))
     try {
       await customersApi.update(id, { status })
+      invalidateCustomers()
     } catch {
       setStatusOverrides(prev => {
         const next = { ...prev }
