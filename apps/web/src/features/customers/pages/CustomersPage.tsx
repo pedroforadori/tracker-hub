@@ -9,11 +9,13 @@ import { CustomerForm, type CustomerFormData } from '../components/CustomerForm'
 
 function CustomersList({
   customers,
+  pendingIds,
   onEdit,
   onDelete,
   onStatusChange,
 }: {
   customers: Customer[]
+  pendingIds: Set<string>
   onEdit: (c: Customer) => void
   onDelete: (id: string) => void
   onStatusChange: (id: string, status: CustomerStatus) => void
@@ -52,6 +54,7 @@ function CustomersList({
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={isAtivo}
+                      disabled={pendingIds.has(c.id)}
                       onChange={(checked) => onStatusChange(c.id, checked ? 'ATIVO' : 'INATIVO')}
                     />
                     <span className="text-xs text-muted-foreground">{isAtivo ? 'Ativo' : 'Inativo'}</span>
@@ -79,6 +82,7 @@ function CustomersList({
 export function CustomersPage() {
   const serverCustomers = use(getCustomersPromise())
   const [statusOverrides, setStatusOverrides] = useState<Record<string, CustomerStatus>>({})
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
 
   const { showForm, setShowForm, editing, setEditing, handleEdit, handleCancel, afterSubmit, handleDelete } =
     useEntityList<Customer>(customersApi.remove, () => {
@@ -99,15 +103,15 @@ export function CustomersPage() {
 
   const handleStatusChange = async (id: string, status: CustomerStatus) => {
     setStatusOverrides(prev => ({ ...prev, [id]: status }))
+    setPendingIds(prev => new Set(prev).add(id))
     try {
       await customersApi.update(id, { status })
       patchCustomerStatus(id, status)
+      setStatusOverrides(prev => { const n = { ...prev }; delete n[id]; return n })
     } catch {
-      setStatusOverrides(prev => {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      })
+      setStatusOverrides(prev => { const n = { ...prev }; delete n[id]; return n })
+    } finally {
+      setPendingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
   }
 
@@ -139,6 +143,7 @@ export function CustomersPage() {
       ) : (
         <CustomersList
           customers={customers}
+          pendingIds={pendingIds}
           onEdit={handleEdit}
           onDelete={(id) => handleDelete(id, 'Confirma exclusão do cliente? Todos os veículos vinculados serão removidos.')}
           onStatusChange={handleStatusChange}
