@@ -64,9 +64,9 @@ describe('MailService', () => {
       );
     });
 
-    it('não lança erro quando resend.emails.send falha', async () => {
-      mockResendSend.mockRejectedValue(new Error('timeout'));
-      await expect(service.sendCheckoutWelcome(to, registerUrl)).resolves.not.toThrow();
+    it('lança erro quando resend retorna error no response', async () => {
+      mockResendSend.mockResolvedValue({ data: null, error: { message: 'timeout' } });
+      await expect(service.sendCheckoutWelcome(to, registerUrl)).rejects.toThrow('Resend error');
     });
   });
 });

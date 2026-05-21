@@ -13,7 +13,7 @@ export default async function ContratadoPage({
       const session = await stripe.checkout.sessions.retrieve(session_id)
       const email = session.customer_details?.email
 
-      if (email) {
+      if (email && session.payment_status === 'paid') {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333'
         await fetch(`${apiUrl}/mail/checkout-welcome`, {
           method: 'POST',

@@ -7,6 +7,11 @@ export async function POST() {
     return NextResponse.json({ error: 'STRIPE_SECRET_KEY not configured' }, { status: 500 })
   }
 
+  const priceId = process.env.STRIPE_PRICE_ID
+  if (!priceId) {
+    return NextResponse.json({ error: 'STRIPE_PRICE_ID not configured' }, { status: 500 })
+  }
+
   const stripe = new Stripe(secretKey)
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
 
@@ -14,7 +19,7 @@ export async function POST() {
     mode: 'subscription',
     line_items: [
       {
-        price: process.env.STRIPE_PRICE_ID!,
+        price: priceId,
         quantity: 1,
       },
     ],
