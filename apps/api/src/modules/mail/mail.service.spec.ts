@@ -1,9 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
 import { MailService } from './mail.service';
 
-const mockMailer = {
-  sendMail: jest.fn(),
+const mockResendSend = jest.fn();
+
+jest.mock('resend', () => ({
+  Resend: jest.fn().mockImplementation(() => ({
+    emails: { send: mockResendSend },
+  })),
+}));
+
+const mockConfig = {
+  getOrThrow: jest.fn().mockReturnValue('re_test_key'),
+  get: jest.fn().mockReturnValue('"Tracker Hub" <noreply@trackerhub.com.br>'),
 };
 
 describe('MailService', () => {
@@ -15,7 +24,7 @@ describe('MailService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MailService,
-        { provide: MailerService, useValue: mockMailer },
+        { provide: ConfigService, useValue: mockConfig },
       ],
     }).compile();
 
@@ -27,37 +36,37 @@ describe('MailService', () => {
     const reason = 'Cartão recusado pelo banco';
     const updateUrl = 'http://localhost:5173/billing';
 
-    it('chama mailer.sendMail com o template correto', async () => {
-      mockMailer.sendMail.mockResolvedValue({});
+    it('chama resend.emails.send com os dados corretos', async () => {
+      mockResendSend.mockResolvedValue({ data: {}, error: null });
       await service.sendPaymentFailed(to, reason, updateUrl);
 
-      expect(mockMailer.sendMail).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to,
-          template: 'payment-failed',
-          context: { reason, updateUrl },
-        }),
+      expect(mockResendSend).toHaveBeenCalledWith(
+        expect.objectContaining({ to, subject: expect.stringContaining('Falha no pagamento') }),
       );
     });
 
-    it('o subject contém "Falha no pagamento"', async () => {
-      mockMailer.sendMail.mockResolvedValue({});
-      await service.sendPaymentFailed(to, reason, updateUrl);
-
-      const call = mockMailer.sendMail.mock.calls[0][0];
-      expect(call.subject).toContain('Falha no pagamento');
-    });
-
-    it('não lança erro quando mailer.sendMail falha', async () => {
-      mockMailer.sendMail.mockRejectedValue(new Error('SMTP connection refused'));
-
+    it('não lança erro quando resend.emails.send falha', async () => {
+      mockResendSend.mockRejectedValue(new Error('network error'));
       await expect(service.sendPaymentFailed(to, reason, updateUrl)).resolves.not.toThrow();
     });
+  });
 
-    it('não propaga o erro — encapsula a falha internamente', async () => {
-      mockMailer.sendMail.mockRejectedValue(new Error('timeout'));
-      const result = await service.sendPaymentFailed(to, reason, updateUrl);
-      expect(result).toBeUndefined();
+  describe('sendCheckoutWelcome()', () => {
+    const to = 'novo@empresa.com';
+    const registerUrl = 'http://localhost:5173/cadastro';
+
+    it('chama resend.emails.send com subject de boas-vindas', async () => {
+      mockResendSend.mockResolvedValue({ data: {}, error: null });
+      await service.sendCheckoutWelcome(to, registerUrl);
+
+      expect(mockResendSend).toHaveBeenCalledWith(
+        expect.objectContaining({ to, subject: expect.stringContaining('Bem-vindo') }),
+      );
+    });
+
+    it('não lança erro quando resend.emails.send falha', async () => {
+      mockResendSend.mockRejectedValue(new Error('timeout'));
+      await expect(service.sendCheckoutWelcome(to, registerUrl)).resolves.not.toThrow();
     });
   });
 });
