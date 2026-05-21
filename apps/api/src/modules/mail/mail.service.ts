@@ -43,7 +43,18 @@ export class MailService {
   }
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function paymentFailedHtml(reason: string, updateUrl: string): string {
+  const safeReason = escapeHtml(reason)
+  const safeUpdateUrl = escapeHtml(updateUrl)
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -67,9 +78,9 @@ function paymentFailedHtml(reason: string, updateUrl: string): string {
     <div class="header"><h1>Falha no pagamento</h1></div>
     <div class="body">
       <p>Identificamos uma falha ao processar o pagamento da sua assinatura no <strong>Tracker Hub</strong>.</p>
-      <div class="reason">${reason}</div>
+      <div class="reason">${safeReason}</div>
       <p>Você tem <strong>3 dias</strong> para atualizar sua forma de pagamento antes que o acesso seja bloqueado.</p>
-      <p><a href="${updateUrl}" class="btn">Atualizar forma de pagamento</a></p>
+      <p><a href="${safeUpdateUrl}" class="btn">Atualizar forma de pagamento</a></p>
       <p>Se precisar de ajuda, entre em contato com nosso suporte.</p>
     </div>
     <div class="footer">Tracker Hub &mdash; e-mail automático.</div>
@@ -79,6 +90,7 @@ function paymentFailedHtml(reason: string, updateUrl: string): string {
 }
 
 function checkoutWelcomeHtml(registerUrl: string): string {
+  const safeRegisterUrl = escapeHtml(registerUrl)
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -102,8 +114,8 @@ function checkoutWelcomeHtml(registerUrl: string): string {
     <div class="body">
       <p>Sua contratação foi realizada com sucesso!</p>
       <p>Clique no botão abaixo para criar sua conta de administrador e começar a usar a plataforma.</p>
-      <p><a href="${registerUrl}" class="btn">Criar minha conta</a></p>
-      <p>Se o botão não funcionar, copie e cole este link no navegador:<br /><a href="${registerUrl}">${registerUrl}</a></p>
+      <p><a href="${safeRegisterUrl}" class="btn">Criar minha conta</a></p>
+      <p>Se o botão não funcionar, copie e cole este link no navegador:<br /><a href="${safeRegisterUrl}">${safeRegisterUrl}</a></p>
     </div>
     <div class="footer">Tracker Hub &mdash; e-mail automático.</div>
   </div>

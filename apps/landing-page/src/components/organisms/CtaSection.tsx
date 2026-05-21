@@ -33,7 +33,9 @@ export function CtaSection() {
     setLoadingPlan(period)
     try {
       const res = await fetch('/api/checkout', { method: 'POST' })
-      const { url } = await res.json()
+      if (!res.ok) throw new Error('checkout request failed')
+      const { url, error } = await res.json()
+      if (!url || error) throw new Error(error ?? 'no url returned')
       window.location.href = url
     } catch {
       setLoadingPlan(null)
