@@ -9,7 +9,7 @@ describe('HeroSection', () => {
 
   it('exibe os links de call-to-action', () => {
     render(<HeroSection />)
-    expect(screen.getByRole('link', { name: /testar/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /contratar/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /demo/i })).toBeInTheDocument()
   })
 })
