@@ -7,6 +7,7 @@ import { DashboardSkeleton } from './features/dashboard/components/DashboardSkel
 import { MainLayout } from '@/shared/components/MainLayout'
 import { ProtectedRoute } from '@/shared/components/ProtectedRoute'
 import { LoginPage } from './features/auth/pages/LoginPage'
+import { RegisterPage } from './features/auth/pages/RegisterPage'
 
 const DashboardPage = lazy(() =>
   import('./features/dashboard/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
@@ -37,6 +38,7 @@ function App() {
         <BillingGate>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/cadastro" element={<RegisterPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
