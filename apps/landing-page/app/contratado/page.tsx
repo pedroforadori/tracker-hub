@@ -1,6 +1,32 @@
-const WEB_APP_URL = process.env.NEXT_PUBLIC_WEB_URL ?? 'http://localhost:5173'
+import Stripe from 'stripe'
 
-export default function ContratadoPage() {
+export default async function ContratadoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ session_id?: string }>
+}) {
+  const { session_id } = await searchParams
+
+  if (session_id && process.env.STRIPE_SECRET_KEY) {
+    try {
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+      const session = await stripe.checkout.sessions.retrieve(session_id)
+      const email = session.customer_details?.email
+
+      if (email) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333'
+        await fetch(`${apiUrl}/mail/checkout-welcome`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+          cache: 'no-store',
+        }).catch(() => {})
+      }
+    } catch {
+      // não bloqueia a página de sucesso em caso de falha
+    }
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-bg-warm px-8 text-center">
       <div className="max-w-lg">
@@ -12,14 +38,8 @@ export default function ContratadoPage() {
           <em className="italic text-amber-deep">com sucesso!</em>
         </h1>
         <p className="mt-5 text-base leading-relaxed text-ink-2">
-          Nossa equipe vai entrar em contato em breve para configurar sua conta. Fique de olho no e-mail.
+          Enviamos um e-mail com o link para criar sua conta. Fique de olho na caixa de entrada.
         </p>
-        {/* <a
-          href={WEB_APP_URL}
-          className="mt-10 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3.5 text-base font-medium text-paper transition-all hover:-translate-y-px hover:bg-ink-2"
-        >
-          Acessar o painel <span className="font-display italic">→</span>
-        </a> */}
       </div>
     </main>
   )
