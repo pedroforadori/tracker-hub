@@ -3,11 +3,10 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 import helmet from 'helmet';
-import { AppModule } from '../src/app.module';
+import { AppModule } from './app.module';
 
-const server = express();
+export const server = express();
 
-// Raw body must be captured before any other middleware for Stripe webhook verification
 server.use(
   express.json({
     verify: (req: any, _res: any, buf: Buffer) => {
@@ -17,7 +16,7 @@ server.use(
 );
 server.use(express.urlencoded({ extended: true }));
 
-const app$ = NestFactory.create(AppModule, new ExpressAdapter(server), {
+export const app$ = NestFactory.create(AppModule, new ExpressAdapter(server), {
   bodyParser: false,
 }).then(async (app) => {
   app.use(helmet());
@@ -29,11 +28,3 @@ const app$ = NestFactory.create(AppModule, new ExpressAdapter(server), {
   });
   await app.init();
 });
-
-export default async function handler(
-  req: express.Request,
-  res: express.Response,
-) {
-  await app$;
-  server(req, res);
-}
