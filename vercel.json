@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm --filter api exec prisma generate",
+  "builds": [
+    {
+      "src": "apps/api/api/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "apps/api/node_modules/.prisma/**",
+          "apps/api/prisma/schema.prisma"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "apps/api/api/index.ts"
+    }
+  ]
+}
