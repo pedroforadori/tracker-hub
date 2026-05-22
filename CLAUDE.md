@@ -42,8 +42,10 @@ pnpm --filter web test -- src/components/organisms/__tests__/FormEntity.smoke.te
 # Build
 pnpm build:all
 
-# Installing new packages (always --ignore-scripts)
-pnpm add <pkg> --filter <app> --ignore-scripts
+# Installing new packages
+pnpm add <pkg> --filter <app>
+# After any pnpm install, regenerate Prisma Client:
+pnpm prisma:generate
 ```
 
 ## Environment Variables
