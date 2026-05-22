@@ -5,7 +5,7 @@ import express from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
-export const server = express();
+export const server: express.Express = express();
 
 server.use(
   express.json({
