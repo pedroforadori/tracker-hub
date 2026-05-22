@@ -18,20 +18,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@11.0.0-alpha.14",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@nestjs/core",
-      "@prisma/client",
-      "@prisma/engines",
-      "@scarf/scarf",
-      "@swc/core",
-      "bcrypt",
-      "esbuild",
-      "msw",
-      "prisma",
-      "sharp",
-      "unrs-resolver"
-    ]
-  }
+  "packageManager": "pnpm@10.11.0"
 }

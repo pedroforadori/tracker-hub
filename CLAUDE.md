@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Monorepo Structure
 
-pnpm workspace with three apps. All dependency installs require `--ignore-scripts` (pnpm 11 alpha restriction).
+pnpm workspace with three apps.
 
 ```
 apps/
