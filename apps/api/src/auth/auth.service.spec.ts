@@ -84,7 +84,7 @@ describe('AuthService', () => {
 
       expect(result).toEqual({
         accessToken: 'signed-token',
-        user: { id: 'user-1', email: 'admin@test.com', role: UserRole.ADMIN, tenantId: 'tenant-1' },
+        user: { id: 'user-1', email: 'admin@test.com', name: 'Admin', role: UserRole.ADMIN, tenantId: 'tenant-1' },
       });
     });
 
@@ -177,7 +177,7 @@ describe('AuthService', () => {
 
       expect(result).toEqual({
         accessToken: 'signed-token',
-        user: { id: 'user-1', email: 'admin@test.com', role: UserRole.ADMIN, tenantId: 'tenant-1' },
+        user: { id: 'user-1', email: 'admin@test.com', name: 'Admin', role: UserRole.ADMIN, tenantId: 'tenant-1' },
       });
     });
 
