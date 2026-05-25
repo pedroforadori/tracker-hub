@@ -76,6 +76,11 @@ export class AuthService {
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.password) data.password = await hashPassword(dto.password);
 
+    // Nada para atualizar — retorna o perfil atual sem query de escrita
+    if (Object.keys(data).length === 0) {
+      return this.getProfile(currentUser);
+    }
+
     return this.prisma.user.update({
       where: { id: currentUser.id },
       data,

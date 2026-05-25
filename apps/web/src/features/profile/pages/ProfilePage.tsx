@@ -6,6 +6,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { FormField } from '@/components/molecules/FormField'
 import { FormActions } from '@/components/molecules/FormActions'
 import { INPUT_BASE } from '@/shared/constants/styles'
+import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/shared/store/authStore'
 import { profileApi } from '../api/profile.api'
 
@@ -32,6 +33,7 @@ export function ProfilePage() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -50,6 +52,7 @@ export function ProfilePage() {
       if (data.password) payload.password = data.password
       const updated = await profileApi.updateMe(payload)
       updateUser({ name: updated.name })
+      reset({ name: updated.name, password: '' })
       setSuccess(true)
     } catch {
       setServerError('Erro ao salvar as alterações. Tente novamente.')
@@ -59,6 +62,7 @@ export function ProfilePage() {
   const handleCancel = () => {
     setServerError('')
     setSuccess(false)
+    reset({ name: user?.name ?? '', password: '' })
   }
 
   return (
@@ -120,7 +124,7 @@ export function ProfilePage() {
                 type={showPassword ? 'text' : 'password'}
                 {...register('password')}
                 placeholder="Deixe em branco para manter a senha atual"
-                className={INPUT_BASE + ' pr-10'}
+                className={cn(INPUT_BASE, 'pr-10')}
               />
               <button
                 type="button"
