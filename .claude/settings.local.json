@@ -11,7 +11,14 @@
       "Bash(curl -s -X POST http://localhost:3333/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"foradorif@gmail.com\",\"password\":\"Senha123!\"}')",
       "Bash(kill %1)",
       "Bash(cat /tmp/api-dev.log 2>/dev/null | tail -15)",
-      "Read(//private/tmp/**)"
+      "Read(//private/tmp/**)",
+      "Bash(pnpm --filter landing-page test)",
+      "Bash(pnpm --filter web test)",
+      "Bash(pnpm --filter api test)",
+      "Bash(pnpm --filter api test -- --testPathPattern=\"password\")",
+      "Bash(pnpm --filter api exec jest --testRegex=\"password\")",
+      "Bash(pnpm test:all)",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }

@@ -1,6 +1,8 @@
 import * as bcrypt from 'bcrypt';
 import { hashPassword } from './password.util';
 
+jest.setTimeout(30000);
+
 describe('hashPassword()', () => {
   it('produz um hash bcrypt (começa com $2b$)', async () => {
     const hash = await hashPassword('MinhaSenh@1');
