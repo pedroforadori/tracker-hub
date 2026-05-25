@@ -42,6 +42,22 @@ describe('authStore', () => {
     expect(parsed.state.isAuthenticated).toBe(true)
   })
 
+  it('updateUser() mescla campos parciais no user existente', () => {
+    const { login, updateUser } = useAuthStore.getState()
+    login('fake-token-123', adminUser)
+    updateUser({ name: 'Novo Nome' })
+    const state = useAuthStore.getState()
+    expect(state.user?.name).toBe('Novo Nome')
+    expect(state.user?.email).toBe(adminUser.email)
+    expect(state.user?.role).toBe(adminUser.role)
+  })
+
+  it('updateUser() não altera user quando não autenticado', () => {
+    const { updateUser } = useAuthStore.getState()
+    updateUser({ name: 'Qualquer Nome' })
+    expect(useAuthStore.getState().user).toBeNull()
+  })
+
   it('não vaza estado entre testes (resetAllStores chamado no afterEach)', () => {
     // Este teste verifica que o reset do setup.ts funciona
     const state = useAuthStore.getState()

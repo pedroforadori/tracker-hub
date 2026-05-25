@@ -73,10 +73,22 @@ export function MainLayout() {
         </nav>
 
         <div className="border-t border-border p-3">
-          <div className="mb-2 px-3 py-1 text-xs text-muted-foreground">
-            {user?.email}
-            <span className="ml-1 rounded bg-muted px-1 py-0.5 text-xs">{user?.role}</span>
-          </div>
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              cn(
+                'mb-2 flex items-center gap-2 rounded-md px-3 py-1 text-xs text-muted-foreground transition-colors',
+                isActive
+                  ? 'bg-accent text-accent-foreground'
+                  : 'hover:bg-accent hover:text-accent-foreground',
+              )
+            }
+          >
+            <span className="truncate">{user?.name ?? user?.email}</span>
+            <span className="ml-auto shrink-0 rounded bg-muted px-1 py-0.5 text-xs">
+              {user?.role}
+            </span>
+          </NavLink>
           <button
             onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
