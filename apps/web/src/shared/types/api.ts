@@ -14,7 +14,7 @@ export interface BillingStatus {
 export interface AuthUser {
   id: string
   email: string
-  name?: string
+  name: string
   role: UserRole
   tenantId: string
 }

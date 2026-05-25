@@ -30,6 +30,9 @@ const TeamPage = lazy(() =>
 const BillingPage = lazy(() =>
   import('./features/billing/pages/BillingPage').then((m) => ({ default: m.BillingPage })),
 )
+const ProfilePage = lazy(() =>
+  import('./features/profile/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })),
+)
 
 function App() {
   return (
@@ -81,6 +84,14 @@ function App() {
                   element={
                     <Suspense fallback={<TableSkeleton />}>
                       <ChipsPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <Suspense fallback={<TableSkeleton />}>
+                      <ProfilePage />
                     </Suspense>
                   }
                 />
