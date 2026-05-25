@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Eye, EyeOff } from 'lucide-react'
 import { FormField } from '@/components/molecules/FormField'
+import { FormActions } from '@/components/molecules/FormActions'
 import { INPUT_BASE } from '@/shared/constants/styles'
 import { useAuthStore } from '@/shared/store/authStore'
 import { profileApi } from '../api/profile.api'
@@ -25,6 +27,7 @@ export function ProfilePage() {
   const { user, updateUser } = useAuthStore()
   const [serverError, setServerError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -53,34 +56,38 @@ export function ProfilePage() {
     }
   }
 
+  const handleCancel = () => {
+    setServerError('')
+    setSuccess(false)
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-          PAINEL TRACKERHUB CONTROL
-        </p>
-        <h1 className="text-2xl font-bold">Meu Perfil</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Meu Perfil</h1>
       </div>
 
-      <div className="max-w-md rounded-lg border border-border p-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          {serverError && (
-            <div
-              role="alert"
-              className="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
-            >
-              {serverError}
-            </div>
-          )}
-          {success && (
-            <div
-              role="status"
-              className="rounded-md bg-primary/10 p-3 text-sm text-primary"
-            >
-              Perfil atualizado com sucesso.
-            </div>
-          )}
+      <div className="rounded-lg border border-border p-6">
+        <h2 className="mb-4 text-base font-medium">Editar Perfil</h2>
 
+        {serverError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+          >
+            {serverError}
+          </div>
+        )}
+        {success && (
+          <div
+            role="status"
+            className="mb-4 rounded-md bg-primary/10 p-3 text-sm text-primary"
+          >
+            Perfil atualizado com sucesso.
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <FormField label="Nome" htmlFor="name" error={errors.name?.message} required>
             <input
               id="name"
@@ -107,24 +114,32 @@ export function ProfilePage() {
             htmlFor="password"
             error={errors.password?.message}
           >
-            <input
-              id="password"
-              type="password"
-              {...register('password')}
-              placeholder="Deixe em branco para manter a senha atual"
-              className={INPUT_BASE}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                {...register('password')}
+                placeholder="Deixe em branco para manter a senha atual"
+                className={INPUT_BASE + ' pr-10'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+                aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </FormField>
 
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              {isSubmitting ? 'Salvando...' : 'Salvar alterações'}
-            </button>
-          </div>
+          <FormActions
+            onCancel={handleCancel}
+            isSubmitting={isSubmitting}
+            isEditing
+            submitLabel="Salvar alterações"
+          />
         </form>
       </div>
     </div>
