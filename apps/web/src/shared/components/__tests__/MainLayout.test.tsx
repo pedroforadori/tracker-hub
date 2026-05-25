@@ -51,11 +51,17 @@ describe('MainLayout', () => {
     expect(screen.queryByRole('link', { name: /cobrança/i })).not.toBeInTheDocument()
   })
 
-  it('exibe o e-mail e role do usuário logado', () => {
+  it('exibe o nome e role do usuário logado', () => {
     authenticateAsAdmin()
     renderLayout()
-    expect(screen.getByText('admin@test.com')).toBeInTheDocument()
+    expect(screen.getByText('Admin Teste')).toBeInTheDocument()
     expect(screen.getByText('ADMIN')).toBeInTheDocument()
+  })
+
+  it('exibe link de perfil que navega para /profile', () => {
+    authenticateAsAdmin()
+    renderLayout()
+    expect(screen.getByRole('link', { name: /admin teste/i })).toHaveAttribute('href', '/profile')
   })
 
   it('clique em Sair → chama logout() e navega para /login', async () => {
