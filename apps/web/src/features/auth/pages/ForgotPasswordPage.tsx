@@ -27,12 +27,15 @@ export function ForgotPasswordPage() {
     setServerError('')
     try {
       await authApi.forgotPassword(data.email)
-    } catch {
-      // Erros de rede impedem o envio — exibe mensagem de retry sem revelar existência do e-mail
-      setServerError('Erro ao enviar solicitação. Verifique sua conexão e tente novamente.')
-      return
+      setSubmitted(true)
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 404) {
+        setServerError('Nenhuma conta encontrada com este e-mail.')
+      } else {
+        setServerError('Erro ao enviar solicitação. Verifique sua conexão e tente novamente.')
+      }
     }
-    setSubmitted(true)
   }
 
   if (submitted) {
@@ -41,8 +44,8 @@ export function ForgotPasswordPage() {
         <div className="w-full max-w-sm space-y-4 text-center">
           <h1 className="text-2xl font-bold text-foreground">Verifique seu e-mail</h1>
           <p className="text-sm text-muted-foreground">
-            Se o e-mail informado estiver cadastrado, você receberá um link para redefinir sua
-            senha em breve. O link expira em 30 minutos.
+            Enviamos um link de redefinição de senha para o seu e-mail.
+            O link expira em 30 minutos.
           </p>
           <Link
             to="/login"

@@ -99,8 +99,7 @@ export class AuthService {
   async forgotPassword(dto: ForgotPasswordDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
 
-    // Sempre retorna ok — não revela existência do e-mail (segurança)
-    if (!user) return { ok: true };
+    if (!user) throw new NotFoundException('E-mail não encontrado');
 
     const rawToken = randomBytes(32).toString('hex');
     const hash = createHash('sha256').update(rawToken).digest('hex');
