@@ -109,14 +109,15 @@ export class BillingService {
       throw new BadRequestException('Stripe customer or subscription not found.');
     }
 
-    // Security: only accept PMs that are already attached to this customer.
-    // In the normal flow, the PM is attached to the customer automatically when
-    // the client calls stripe.confirmCardSetup() with a SetupIntent created for
-    // this customer — so pm.customer should equal stripeCustomerId at this point.
+    // Verify that the payment method is not already attached to a different customer (IDOR guard)
     const pm = await this.stripe.paymentMethods.retrieve(paymentMethodId);
-    if (pm.customer !== tenant.stripeCustomerId) {
+    if (pm.customer && pm.customer !== tenant.stripeCustomerId) {
       throw new BadRequestException('Payment method does not belong to this customer.');
     }
+
+    await this.stripe.paymentMethods.attach(paymentMethodId, {
+      customer: tenant.stripeCustomerId,
+    });
 
     await this.stripe.customers.update(tenant.stripeCustomerId, {
       invoice_settings: { default_payment_method: paymentMethodId },

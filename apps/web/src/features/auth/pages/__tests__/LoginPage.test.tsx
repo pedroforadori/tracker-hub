@@ -24,7 +24,7 @@ function renderLoginPage() {
 async function fillAndSubmit(email: string, password: string) {
   const user = userEvent.setup()
   await user.type(screen.getByLabelText(/e-mail/i), email)
-  await user.type(screen.getByLabelText(/senha/i), password)
+  await user.type(screen.getByLabelText('Senha'), password)
   await user.click(screen.getByRole('button', { name: /entrar/i }))
 }
 
@@ -32,7 +32,7 @@ describe('LoginPage', () => {
   it('renderiza campos e botão', () => {
     renderLoginPage()
     expect(screen.getByLabelText(/e-mail/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/senha/i)).toBeInTheDocument()
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument()
   })
 
@@ -96,7 +96,7 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     renderLoginPage()
     await user.type(screen.getByLabelText(/e-mail/i), 'admin@test.com')
-    await user.type(screen.getByLabelText(/senha/i), 'Senha123')
+    await user.type(screen.getByLabelText('Senha'), 'Senha123')
     user.click(screen.getByRole('button', { name: /entrar/i }))
 
     await waitFor(() => expect(screen.getByRole('button', { name: /entrando/i })).toBeDisabled())

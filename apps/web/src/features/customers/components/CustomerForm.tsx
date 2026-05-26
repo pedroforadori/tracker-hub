@@ -41,7 +41,7 @@ export function CustomerForm({ initialData, onSubmit, onCancel }: CustomerFormPr
       cnpj: initialData?.cnpj ?? '',
       email: initialData?.email ?? '',
       phone: initialData?.phone ?? '',
-      monthlyFee: initialData?.monthlyFee ?? undefined,
+      monthlyFee: initialData?.monthlyFee != null ? Number(initialData.monthlyFee) : 0,
       status: initialData?.status ?? 'ATIVO',
     },
   })
