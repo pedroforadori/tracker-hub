@@ -12,6 +12,7 @@ import { authApi } from '../api/auth.api'
 
 const registerSchema = z
   .object({
+    tenantName: z.string().min(2, 'Nome da empresa deve ter ao menos 2 caracteres').max(100),
     name: f.name,
     email: f.email,
     password: f.password,
@@ -47,7 +48,7 @@ export function RegisterPage() {
         name: data.name,
         email: data.email,
         password: data.password,
-        tenantName: data.name,
+        tenantName: data.tenantName,
       })
       login(res.accessToken, res.user)
       navigate('/dashboard')
@@ -75,6 +76,22 @@ export function RegisterPage() {
               {serverError}
             </div>
           )}
+
+          <div className="space-y-1">
+            <label htmlFor="tenantName" className="text-sm font-medium text-foreground">
+              Nome da empresa
+            </label>
+            <input
+              id="tenantName"
+              type="text"
+              {...register('tenantName')}
+              placeholder="Minha Empresa Ltda."
+              className={INPUT_BASE}
+            />
+            {errors.tenantName && (
+              <p role="alert" className="text-xs text-destructive">{errors.tenantName.message}</p>
+            )}
+          </div>
 
           <div className="space-y-1">
             <label htmlFor="name" className="text-sm font-medium text-foreground">

@@ -2,6 +2,8 @@ import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlanStatus } from '@prisma/client';
+import { STRIPE_CLIENT } from '../../stripe/stripe.module';
+import { BillingCacheService } from './billing-cache.service';
 import { BillingRepository } from './billing.repository';
 import { BillingService } from './billing.service';
 import { MailService } from '../mail/mail.service';
@@ -50,6 +52,12 @@ const mockMail = {
   sendPaymentFailed: jest.fn().mockResolvedValue(undefined),
 };
 
+const mockCache = {
+  get: jest.fn().mockReturnValue(undefined),
+  set: jest.fn(),
+  invalidate: jest.fn(),
+};
+
 const mockConfig = {
   getOrThrow: jest.fn().mockImplementation((key: string) => {
     if (key === 'STRIPE_SECRET_KEY') return 'sk_test_dummy';
@@ -80,6 +88,7 @@ describe('BillingService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     mockStripe = buildMockStripe();
+    mockCache.get.mockReturnValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -87,11 +96,12 @@ describe('BillingService', () => {
         { provide: BillingRepository, useValue: mockRepo },
         { provide: MailService, useValue: mockMail },
         { provide: ConfigService, useValue: mockConfig },
+        { provide: STRIPE_CLIENT, useValue: mockStripe },
+        { provide: BillingCacheService, useValue: mockCache },
       ],
     }).compile();
 
     service = module.get<BillingService>(BillingService);
-    (service as unknown as { stripe: typeof mockStripe }).stripe = mockStripe;
   });
 
   describe('getStatus()', () => {

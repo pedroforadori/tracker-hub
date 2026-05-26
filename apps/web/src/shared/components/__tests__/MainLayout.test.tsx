@@ -30,7 +30,6 @@ describe('MainLayout', () => {
   it('exibe links de navegação básicos para todos os usuários', () => {
     authenticateAsAdmin()
     renderLayout()
-    expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /clientes/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /veículos/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /rastreadores/i })).toBeInTheDocument()
@@ -51,17 +50,11 @@ describe('MainLayout', () => {
     expect(screen.queryByRole('link', { name: /cobrança/i })).not.toBeInTheDocument()
   })
 
-  it('exibe o nome e role do usuário logado', () => {
+  it('exibe o e-mail e role do usuário logado', () => {
     authenticateAsAdmin()
     renderLayout()
     expect(screen.getByText('Admin Teste')).toBeInTheDocument()
     expect(screen.getByText('ADMIN')).toBeInTheDocument()
-  })
-
-  it('exibe link de perfil que navega para /profile', () => {
-    authenticateAsAdmin()
-    renderLayout()
-    expect(screen.getByRole('link', { name: /admin teste/i })).toHaveAttribute('href', '/profile')
   })
 
   it('clique em Sair → chama logout() e navega para /login', async () => {

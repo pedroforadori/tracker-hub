@@ -5,6 +5,7 @@ import {
   RequestMethod,
 } from '@nestjs/common';
 import { json } from 'express';
+import { BillingCacheService } from './billing-cache.service';
 import { BillingController } from './billing.controller';
 import { BillingRepository } from './billing.repository';
 import { BillingService } from './billing.service';
@@ -17,12 +18,13 @@ function rawBodyMiddleware(req: any, _res: any, next: any) {
     req.rawBody = Buffer.concat(chunks);
     next();
   });
+  req.on('error', next);
 }
 
 @Module({
   controllers: [BillingController],
-  providers: [BillingService, BillingRepository],
-  exports: [BillingService],
+  providers: [BillingCacheService, BillingRepository, BillingService],
+  exports: [BillingCacheService, BillingService],
 })
 export class BillingModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

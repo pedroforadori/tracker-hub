@@ -28,17 +28,25 @@ const plans = [
 
 export function CtaSection() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   const handleCheckout = async (period: string) => {
     setLoadingPlan(period)
+    setCheckoutError(null)
     try {
-      const res = await fetch('/api/checkout', { method: 'POST' })
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period }),
+      })
       if (!res.ok) throw new Error('checkout request failed')
       const { url, error } = await res.json()
       if (!url || error) throw new Error(error ?? 'no url returned')
       window.location.href = url
-    } catch {
+    } catch (err) {
+      console.error('[CtaSection] checkout failed:', err)
       setLoadingPlan(null)
+      setCheckoutError('Erro ao iniciar o checkout. Tente novamente em alguns instantes.')
     }
   }
 
@@ -53,6 +61,12 @@ export function CtaSection() {
       />
 
       <div className="relative">
+        {checkoutError && (
+          <div role="alert" className="mb-6 rounded-xl border border-red-400/30 bg-red-500/10 px-5 py-3 text-center text-sm text-red-300">
+            {checkoutError}
+          </div>
+        )}
+
         <div className="text-center">
           <p className="font-mono text-[11px] uppercase tracking-widest text-paper/50">Preços · por veículo/mês</p>
           <h2 className="mt-3 font-display text-5xl leading-tight text-paper lg:text-7xl">
