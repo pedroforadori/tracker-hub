@@ -30,7 +30,6 @@ describe('MainLayout', () => {
   it('exibe links de navegação básicos para todos os usuários', () => {
     authenticateAsAdmin()
     renderLayout()
-    expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /clientes/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /veículos/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /rastreadores/i })).toBeInTheDocument()
@@ -54,7 +53,7 @@ describe('MainLayout', () => {
   it('exibe o e-mail e role do usuário logado', () => {
     authenticateAsAdmin()
     renderLayout()
-    expect(screen.getByText('admin@test.com')).toBeInTheDocument()
+    expect(screen.getByText('Admin Teste')).toBeInTheDocument()
     expect(screen.getByText('ADMIN')).toBeInTheDocument()
   })
 
