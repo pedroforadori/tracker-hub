@@ -8,7 +8,7 @@ export default async function ContratadoPage({
   // Delega a validação do Stripe e o envio do e-mail ao endpoint interno da API.
   // A API verifica o session_id diretamente no Stripe antes de enviar qualquer e-mail.
   if (session_id) {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333'
+    const apiUrl = process.env.API_URL ?? 'http://localhost:3333'
     const internalSecret = process.env.INTERNAL_API_SECRET ?? ''
 
     try {

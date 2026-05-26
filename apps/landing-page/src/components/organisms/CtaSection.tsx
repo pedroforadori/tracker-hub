@@ -43,7 +43,8 @@ export function CtaSection() {
       const { url, error } = await res.json()
       if (!url || error) throw new Error(error ?? 'no url returned')
       window.location.href = url
-    } catch {
+    } catch (err) {
+      console.error('[CtaSection] checkout failed:', err)
       setLoadingPlan(null)
       setCheckoutError('Erro ao iniciar o checkout. Tente novamente em alguns instantes.')
     }

@@ -14,12 +14,14 @@ import { TrackersModule } from './modules/trackers/trackers.module';
 import { UsersModule } from './modules/users/users.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 60 }] }),
     PrismaModule,
+    StripeModule,
     MailModule,
     AuthModule,
     UsersModule,

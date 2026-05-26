@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlanStatus } from '@prisma/client';
+import { STRIPE_CLIENT } from '../../stripe/stripe.module';
 import { BillingRepository } from './billing.repository';
 import { BillingService } from './billing.service';
 import { MailService } from '../mail/mail.service';
@@ -87,11 +88,11 @@ describe('BillingService', () => {
         { provide: BillingRepository, useValue: mockRepo },
         { provide: MailService, useValue: mockMail },
         { provide: ConfigService, useValue: mockConfig },
+        { provide: STRIPE_CLIENT, useValue: mockStripe },
       ],
     }).compile();
 
     service = module.get<BillingService>(BillingService);
-    (service as unknown as { stripe: typeof mockStripe }).stripe = mockStripe;
   });
 
   describe('getStatus()', () => {
