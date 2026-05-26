@@ -1,4 +1,4 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -25,6 +25,7 @@ const mockPrisma = {
   user: {
     findUnique: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
   },
   $transaction: jest.fn(),
 };
@@ -52,6 +53,14 @@ const adminUser = {
   role: UserRole.ADMIN,
   tenantId: 'tenant-1',
   password: 'hashed-password',
+  passwordResetToken: null,
+  passwordResetExpiry: null,
+};
+
+const userWithResetToken = {
+  ...adminUser,
+  passwordResetToken: 'hashed-token',
+  passwordResetExpiry: new Date(Date.now() + 30 * 60 * 1000),
 };
 
 describe('AuthService', () => {
@@ -204,6 +213,71 @@ describe('AuthService', () => {
       bcrypt.compare.mockResolvedValue(false);
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('forgotPassword()', () => {
+    it('retorna { ok: true } e envia e-mail quando o e-mail existe', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(adminUser);
+      mockPrisma.user.update.mockResolvedValue(adminUser);
+
+      const result = await service.forgotPassword({ email: adminUser.email });
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: adminUser.id } }),
+      );
+      expect(mockMail.sendPasswordReset).toHaveBeenCalledWith(
+        adminUser.email,
+        expect.stringContaining('/redefinir-senha?token='),
+      );
+    });
+
+    it('retorna { ok: true } silenciosamente quando o e-mail não existe', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.forgotPassword({ email: 'naoexiste@test.com' });
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockMail.sendPasswordReset).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resetPassword()', () => {
+    it('redefine a senha e limpa o token quando o token é válido', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(userWithResetToken);
+      mockPrisma.user.update.mockResolvedValue(adminUser);
+
+      const result = await service.resetPassword({ token: 'raw-token', password: 'NewPass1' });
+
+      expect(result).toEqual({ ok: true });
+      const updateArg = mockPrisma.user.update.mock.calls[0][0] as {
+        where: { id: string };
+        data: Record<string, unknown>;
+      };
+      expect(updateArg.where).toEqual({ id: adminUser.id });
+      expect(updateArg.data.passwordResetToken).toBeNull();
+      expect(updateArg.data.passwordResetExpiry).toBeNull();
+    });
+
+    it('lança BadRequestException quando o token é inválido (usuário não encontrado)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword({ token: 'invalid', password: 'NewPass1' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('lança BadRequestException quando o token está expirado', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        ...userWithResetToken,
+        passwordResetExpiry: new Date(Date.now() - 1000),
+      });
+
+      await expect(
+        service.resetPassword({ token: 'expired-token', password: 'NewPass1' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

@@ -28,13 +28,8 @@ export function ForgotPasswordPage() {
     try {
       await authApi.forgotPassword(data.email)
       setSubmitted(true)
-    } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status
-      if (status === 404) {
-        setServerError('Nenhuma conta encontrada com este e-mail.')
-      } else {
-        setServerError('Erro ao enviar solicitação. Verifique sua conexão e tente novamente.')
-      }
+    } catch {
+      setServerError('Erro ao enviar solicitação. Verifique sua conexão e tente novamente.')
     }
   }
 

@@ -55,12 +55,14 @@ Each app has its own `.env.example`. Copy and fill before running locally.
 **`apps/api/.env`**
 ```
 DATABASE_URL="postgresql://tracker:tracker_pass@localhost:5433/tracker_hub"
+DIRECT_URL=               # Supabase: URL direta (não pooler) p/ migrate/generate
 JWT_SECRET=
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PRICE_ID=price_...
 STRIPE_WEBHOOK_SECRET=
 RESEND_API_KEY=re_...
 RESEND_FROM="Tracker Hub <noreply@trackerhub.com.br>"
+WEB_URL=http://localhost:5173  # usado no link de reset de senha do e-mail
 ```
 
 **`apps/landing-page/.env.local`**

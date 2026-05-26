@@ -104,7 +104,7 @@ function paymentFailedHtml(reason: string, updateUrl: string): string {
 }
 
 function passwordResetHtml(resetUrl: string): string {
-  const safeResetUrl = escapeHtml(resetUrl)
+  const safeResetUrl = escapeHtml(resetUrl);
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
