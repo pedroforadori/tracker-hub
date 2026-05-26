@@ -15,7 +15,6 @@ out/
 .env.*
 !.env.example
 !.env.test.example
-!.env.production
 
 # Logs
 *.log
@@ -53,4 +52,3 @@ coverage/
 .stylelintcache
 .vercel
 .env*
-!**/.env.production
