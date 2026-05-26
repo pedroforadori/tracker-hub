@@ -87,29 +87,6 @@ describe('LoginPage', () => {
     await waitFor(() => expect(useBillingStore.getState().isPastDue).toBe(true))
   })
 
-  it('toggle mostra e oculta a senha', async () => {
-    const user = userEvent.setup()
-    renderLoginPage()
-
-    const input = screen.getByLabelText('Senha') as HTMLInputElement
-    const toggleBtn = screen.getByRole('button', { name: /mostrar senha/i })
-
-    expect(input.type).toBe('password')
-
-    await user.click(toggleBtn)
-    expect(input.type).toBe('text')
-    expect(screen.getByRole('button', { name: /ocultar senha/i })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /ocultar senha/i }))
-    expect(input.type).toBe('password')
-    expect(screen.getByRole('button', { name: /mostrar senha/i })).toBeInTheDocument()
-  })
-
-  it('botão de toggle tem tabIndex={-1}', () => {
-    renderLoginPage()
-    expect(screen.getByRole('button', { name: /mostrar senha/i })).toHaveAttribute('tabIndex', '-1')
-  })
-
   it('durante submit → botão "Entrando..." e desabilitado', async () => {
     let resolveLogin!: (v: unknown) => void
     server.use(

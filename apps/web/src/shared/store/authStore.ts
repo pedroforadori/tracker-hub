@@ -8,6 +8,7 @@ interface AuthState {
   isAuthenticated: boolean
   login: (token: string, user: AuthUser) => void
   logout: () => void
+  updateUser: (partial: Partial<AuthUser>) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -18,6 +19,10 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       login: (token, user) => set({ token, user, isAuthenticated: true }),
       logout: () => set({ token: null, user: null, isAuthenticated: false }),
+      updateUser: (partial) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, ...partial } : null,
+        })),
     }),
     { name: 'tracker-hub-auth' },
   ),

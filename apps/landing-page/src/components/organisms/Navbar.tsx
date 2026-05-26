@@ -8,7 +8,7 @@ const WEB_APP_URL = process.env.NEXT_PUBLIC_WEB_URL ?? 'http://localhost:5173'
 const NAV_LINKS = [
   { label: 'Recursos', href: '#recursos' },
   { label: 'Como funciona', href: '#como-funciona' },
-  { label: 'Preços', href: '#precos' },
+  { label: 'Preços', href: '#contato' },
   { label: 'Clientes', href: '#clientes' },
 ]
 
@@ -48,10 +48,10 @@ export function Navbar() {
             Entrar
           </a>
           <a
-            href="#trial"
+            href="#contato"
             className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-medium text-paper transition-all hover:-translate-y-px hover:bg-ink-2"
           >
-            Começar grátis <span className="font-display italic">→</span>
+            Contratar <span className="font-display italic">→</span>
           </a>
         </div>
 
@@ -81,10 +81,10 @@ export function Navbar() {
           <div className="mt-6 flex flex-col gap-3">
             <a href={WEB_APP_URL} className="text-sm text-ink-2 hover:text-ink">Entrar</a>
             <a
-              href="#trial"
+              href="#contato"
               className="flex w-full items-center justify-center rounded-full bg-ink py-3 text-sm font-medium text-paper"
             >
-              Começar grátis
+              Contratar
             </a>
           </div>
         </div>

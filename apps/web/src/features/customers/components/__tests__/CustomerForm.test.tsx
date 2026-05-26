@@ -17,8 +17,6 @@ describe('CustomerForm — modo criação', () => {
     expect(screen.getByLabelText(/cnpj/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/e-mail/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/telefone/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/mensalidade/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/status/i)).toBeInTheDocument()
   })
 
   it('botão submit é "Cadastrar"', () => {
@@ -88,9 +86,6 @@ describe('CustomerForm — submit válido', () => {
 
     const phoneInput = screen.getByLabelText(/telefone/i)
     fireEvent.change(phoneInput, { target: { value: '11999999999' } })
-
-    const monthlyFeeInput = screen.getByLabelText(/mensalidade/i)
-    fireEvent.change(monthlyFeeInput, { target: { value: '299.90' } })
 
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 

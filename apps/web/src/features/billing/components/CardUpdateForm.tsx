@@ -1,20 +1,35 @@
 import { CardElement, Elements, useElements, useStripe } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useBillingStore } from '@/shared/store/billingStore'
 import { billingApi } from '../api/billing.api'
 
-const stripePromise = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
-  : null
+if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
+  console.warn('[CardUpdateForm] VITE_STRIPE_PUBLISHABLE_KEY is not set — Stripe will not initialize correctly.')
+}
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? '')
 
-function CardForm() {
+interface CardFormProps {
+  onSuccess?: () => void
+}
+
+function CardForm({ onSuccess }: CardFormProps) {
   const stripe = useStripe()
   const elements = useElements()
   const { clearBilling } = useBillingStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  // Cleanup timer if component unmounts before it fires
+  useEffect(() => {
+    if (!success) return
+    const timer = setTimeout(() => {
+      clearBilling()
+      onSuccess?.()
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [success, clearBilling, onSuccess])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,7 +54,6 @@ function CardForm() {
       await billingApi.updatePaymentMethod(setupIntent.payment_method as string)
 
       setSuccess(true)
-      setTimeout(() => clearBilling(), 1500)
     } catch (err) {
       setError((err as Error).message ?? 'Erro ao atualizar cartão')
     } finally {
@@ -82,10 +96,14 @@ function CardForm() {
   )
 }
 
-export function CardUpdateForm() {
+interface CardUpdateFormProps {
+  onSuccess?: () => void
+}
+
+export function CardUpdateForm({ onSuccess }: CardUpdateFormProps) {
   return (
     <Elements stripe={stripePromise}>
-      <CardForm />
+      <CardForm onSuccess={onSuccess} />
     </Elements>
   )
 }
