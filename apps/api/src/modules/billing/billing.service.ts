@@ -1,23 +1,22 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
+import { STRIPE_CLIENT } from '../../stripe/stripe.module';
 import { BillingCacheEntry, BillingCacheService } from './billing-cache.service';
 import { BillingRepository } from './billing.repository';
 import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class BillingService {
-  private readonly stripe: InstanceType<typeof Stripe>;
   private readonly logger = new Logger(BillingService.name);
 
   constructor(
     private readonly repo: BillingRepository,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    @Inject(STRIPE_CLIENT) private readonly stripe: Stripe,
     private readonly cache: BillingCacheService,
   ) {
-    this.stripe = new Stripe(this.config.getOrThrow<string>('STRIPE_SECRET_KEY'));
-
     // Fail fast if Stripe is configured (secret key present) but price ID is missing
     const priceId = this.config.get<string>('STRIPE_PRICE_ID');
     if (!priceId) {
