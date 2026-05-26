@@ -17,6 +17,9 @@ function trackPromise<T>(promise: Promise<T>): ReactThenable<T> {
 
 function resolvedThenable<T>(value: T): ReactThenable<T> {
   const t = Promise.resolve(value) as ReactThenable<T>
+  // `.status` e `.value` devem ser atribuídos ANTES de qualquer microtask,
+  // pois React lê essas propriedades de forma síncrona ao processar o thenable.
+  // Se fossem setadas no .then(), React suspenderia desnecessariamente no primeiro render.
   t.status = 'fulfilled'
   t.value = value
   return t
