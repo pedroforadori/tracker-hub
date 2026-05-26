@@ -1,9 +1,11 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { BillingService } from '../modules/billing/billing.service';
+import { MailService } from '../modules/mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import * as passwordUtil from '../common/utils/password.util';
 
@@ -35,6 +37,14 @@ const mockBilling = {
   createCustomerAndSubscription: jest.fn().mockResolvedValue(undefined),
 };
 
+const mockMail = {
+  sendPasswordReset: jest.fn().mockResolvedValue(undefined),
+};
+
+const mockConfig = {
+  get: jest.fn().mockReturnValue('http://localhost:5173'),
+};
+
 const adminUser = {
   id: 'user-1',
   email: 'admin@test.com',
@@ -57,6 +67,8 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },
         { provide: BillingService, useValue: mockBilling },
+        { provide: MailService, useValue: mockMail },
+        { provide: ConfigService, useValue: mockConfig },
       ],
     }).compile();
 

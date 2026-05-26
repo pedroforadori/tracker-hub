@@ -18,7 +18,9 @@
       "Bash(pnpm --filter api test -- --testPathPattern=\"password\")",
       "Bash(pnpm --filter api exec jest --testRegex=\"password\")",
       "Bash(pnpm test:all)",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "PowerShell(cd c:\\\\www\\\\tracker-hub\\\\apps\\\\api; npx prisma migrate status 2>&1; Write-Host \"---EXIT:$LASTEXITCODE---\")",
+      "PowerShell(cd c:\\\\www\\\\tracker-hub\\\\apps\\\\api; $env:DIRECT_URL = \"postgresql://postgres.REDACTED:REDACTED@REDACTED.supabase.com:5432/postgres\"; npx prisma db push 2>&1; Write-Host \"---EXIT:$LASTEXITCODE---\")"
     ]
   }
 }

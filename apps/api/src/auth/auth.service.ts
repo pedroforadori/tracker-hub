@@ -1,19 +1,25 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createHash, randomBytes } from 'node:crypto';
 import { hashPassword } from '../common/utils/password.util';
 import { BillingService } from '../modules/billing/billing.service';
+import { MailService } from '../modules/mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUser } from '../common/types/current-user.type';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
@@ -24,6 +30,8 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private billing: BillingService,
+    private mail: MailService,
+    private config: ConfigService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -86,6 +94,55 @@ export class AuthService {
       data,
       select: { id: true, name: true, email: true, role: true, tenantId: true },
     });
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+
+    // Sempre retorna ok — não revela existência do e-mail (segurança)
+    if (!user) return { ok: true };
+
+    const rawToken = randomBytes(32).toString('hex');
+    const hash = createHash('sha256').update(rawToken).digest('hex');
+    const expiry = new Date(Date.now() + 30 * 60 * 1000);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetToken: hash, passwordResetExpiry: expiry },
+    });
+
+    const webUrl = this.config.get<string>('WEB_URL', 'http://localhost:5173');
+    const resetUrl = `${webUrl}/redefinir-senha?token=${rawToken}`;
+
+    // Fire-and-forget — erros são logados internamente pelo MailService
+    void this.mail.sendPasswordReset(user.email, resetUrl);
+
+    return { ok: true };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const hash = createHash('sha256').update(dto.token).digest('hex');
+
+    const user = await this.prisma.user.findUnique({
+      where: { passwordResetToken: hash },
+    });
+
+    if (!user || !user.passwordResetExpiry || user.passwordResetExpiry < new Date()) {
+      throw new BadRequestException('Token inválido ou expirado');
+    }
+
+    const hashedPassword = await hashPassword(dto.password);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        passwordResetToken: null,
+        passwordResetExpiry: null,
+      },
+    });
+
+    return { ok: true };
   }
 
   private createStripeSubscriptionWithRetry(tenantId: string, email: string, name: string): void {
