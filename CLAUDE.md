@@ -55,12 +55,14 @@ Each app has its own `.env.example`. Copy and fill before running locally.
 **`apps/api/.env`**
 ```
 DATABASE_URL="postgresql://tracker:tracker_pass@localhost:5433/tracker_hub"
+DIRECT_URL=               # Supabase: URL direta (não pooler) p/ migrate/generate
 JWT_SECRET=
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PRICE_ID=price_...
 STRIPE_WEBHOOK_SECRET=
 RESEND_API_KEY=re_...
 RESEND_FROM="Tracker Hub <noreply@trackerhub.com.br>"
+WEB_URL=http://localhost:5173  # usado no link de reset de senha do e-mail
 ```
 
 **`apps/landing-page/.env.local`**
@@ -155,6 +157,29 @@ App Router. Atomic Design in `src/components/` (atoms/molecules/organisms). Jest
 4. `/contratado` (server component) retrieves the session, and if `payment_status === 'paid'`, calls `POST /mail/checkout-welcome` on the API to send a welcome email with the register link.
 
 **Email service (`src/services/email/`):** Interface `IEmailService` with `MockEmailService` (dev/test) and `ResendEmailService` (production). Injected via `AppContext`.
+
+## Security — Pre-push Credential Scan
+
+**Before every `git push`, scan staged/committed changes for secrets.** This is mandatory.
+
+Run the check below and abort if any match is found:
+
+```bash
+# Scan everything about to be pushed (last N commits + working tree)
+git diff origin/$(git branch --show-current)...HEAD | grep -iE \
+  "password|secret|api[_-]?key|token|DATABASE_URL|DIRECT_URL|sk_live|sk_test|re_[a-z0-9]+|postgresql://[^@]+:[^@]+@" \
+  | grep -v "\.env\.example" \
+  | grep -v "CLAUDE\.md"
+```
+
+If that command prints **anything**, stop and review before pushing.
+
+**Files that must never be committed with real values:**
+- `.claude/settings.local.json` — allowed commands may contain credentials (it is in `.gitignore`)
+- `.env`, `.env.local`, `.env.production` — all ignored by `.gitignore`
+- Any file with hardcoded `postgresql://`, `sk_live_`, `re_` (Resend), or JWT secrets
+
+**If a secret leaks into history**, use `git filter-branch --tree-filter` (or `git filter-repo`) to rewrite all commits, then force-push all branches.
 
 ## First-time Database Setup
 

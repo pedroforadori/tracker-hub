@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { cn } from '@/lib/utils'
 import { INPUT_BASE } from '@/shared/constants/styles'
@@ -118,6 +118,15 @@ export function LoginPage() {
             {errors.password && (
               <p role="alert" className="text-xs text-destructive">{errors.password.message}</p>
             )}
+          </div>
+
+          <div className="-mt-1 text-right">
+            <Link
+              to="/esqueci-minha-senha"
+              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Esqueceu sua senha?
+            </Link>
           </div>
 
           <button

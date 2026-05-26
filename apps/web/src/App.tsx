@@ -6,8 +6,10 @@ import { TableSkeleton } from '@/shared/components/LoadingSkeleton'
 import { DashboardSkeleton } from './features/dashboard/components/DashboardSkeleton'
 import { MainLayout } from '@/shared/components/MainLayout'
 import { ProtectedRoute } from '@/shared/components/ProtectedRoute'
+import { ForgotPasswordPage } from './features/auth/pages/ForgotPasswordPage'
 import { LoginPage } from './features/auth/pages/LoginPage'
 import { RegisterPage } from './features/auth/pages/RegisterPage'
+import { ResetPasswordPage } from './features/auth/pages/ResetPasswordPage'
 
 const DashboardPage = lazy(() =>
   import('./features/dashboard/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
@@ -42,6 +44,8 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/cadastro" element={<RegisterPage />} />
+            <Route path="/esqueci-minha-senha" element={<ForgotPasswordPage />} />
+            <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>

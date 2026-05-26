@@ -39,6 +39,9 @@ desktop.ini
 *.swp
 *.swo
 
+# Claude Code — local settings may contain sensitive allowed commands
+.claude/settings.local.json
+
 # TypeScript
 *.tsbuildinfo
 
