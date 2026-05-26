@@ -156,6 +156,29 @@ App Router. Atomic Design in `src/components/` (atoms/molecules/organisms). Jest
 
 **Email service (`src/services/email/`):** Interface `IEmailService` with `MockEmailService` (dev/test) and `ResendEmailService` (production). Injected via `AppContext`.
 
+## Security — Pre-push Credential Scan
+
+**Before every `git push`, scan staged/committed changes for secrets.** This is mandatory.
+
+Run the check below and abort if any match is found:
+
+```bash
+# Scan everything about to be pushed (last N commits + working tree)
+git diff origin/$(git branch --show-current)...HEAD | grep -iE \
+  "password|secret|api[_-]?key|token|DATABASE_URL|DIRECT_URL|sk_live|sk_test|re_[a-z0-9]+|postgresql://[^@]+:[^@]+@" \
+  | grep -v "\.env\.example" \
+  | grep -v "CLAUDE\.md"
+```
+
+If that command prints **anything**, stop and review before pushing.
+
+**Files that must never be committed with real values:**
+- `.claude/settings.local.json` — allowed commands may contain credentials (it is in `.gitignore`)
+- `.env`, `.env.local`, `.env.production` — all ignored by `.gitignore`
+- Any file with hardcoded `postgresql://`, `sk_live_`, `re_` (Resend), or JWT secrets
+
+**If a secret leaks into history**, use `git filter-branch --tree-filter` (or `git filter-repo`) to rewrite all commits, then force-push all branches.
+
 ## First-time Database Setup
 
 ```bash
