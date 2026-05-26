@@ -68,5 +68,10 @@ describe('MailService', () => {
       mockResendSend.mockResolvedValue({ data: null, error: { message: 'timeout' } });
       await expect(service.sendCheckoutWelcome(to, registerUrl)).rejects.toThrow('Resend error');
     });
+
+    it('lança erro quando resend.emails.send lança exceção de rede', async () => {
+      mockResendSend.mockRejectedValue(new Error('network error'));
+      await expect(service.sendCheckoutWelcome(to, registerUrl)).rejects.toThrow('network error');
+    });
   });
 });

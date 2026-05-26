@@ -26,20 +26,30 @@ export class MailService {
     }
   }
 
+  /**
+   * Envia o e-mail de boas-vindas após checkout.
+   * Ao contrário de sendPaymentFailed (fire-and-forget de webhook), este método
+   * propaga o erro — o controller precisa saber se o envio falhou para retornar
+   * 500 ao chamador e alertar sobre a não-entrega do link de cadastro.
+   */
   async sendCheckoutWelcome(to: string, registerUrl: string): Promise<void> {
-    const { data, error } = await this.resend.emails.send({
-      from: this.from,
-      to,
-      subject: 'Bem-vindo ao Tracker Hub! Crie sua conta agora',
-      html: checkoutWelcomeHtml(registerUrl),
-    });
+    try {
+      const { data, error } = await this.resend.emails.send({
+        from: this.from,
+        to,
+        subject: 'Bem-vindo ao Tracker Hub! Crie sua conta agora',
+        html: checkoutWelcomeHtml(registerUrl),
+      });
 
-    if (error) {
-      this.logger.error(`Resend rejected checkout-welcome email to ${to}: ${JSON.stringify(error)}`);
-      throw new Error(`Resend error: ${JSON.stringify(error)}`);
+      if (error) {
+        throw new Error(`Resend error: ${JSON.stringify(error)}`);
+      }
+
+      this.logger.log(`Checkout-welcome email sent to ${to} — id: ${data?.id}`);
+    } catch (err) {
+      this.logger.error(`Failed to send checkout-welcome email to ${to}`, err);
+      throw err; // propaga para o controller — este e-mail é crítico
     }
-
-    this.logger.log(`Checkout-welcome email sent to ${to} — id: ${data?.id}`);
   }
 }
 
