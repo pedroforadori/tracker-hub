@@ -14,7 +14,7 @@ export class BillingService {
     private readonly repo: BillingRepository,
     private readonly mail: MailService,
     private readonly config: ConfigService,
-    @Inject(STRIPE_CLIENT) private readonly stripe: Stripe,
+    @Inject(STRIPE_CLIENT) private readonly stripe: Stripe.Stripe,
     private readonly cache: BillingCacheService,
   ) {
     // Fail fast if Stripe is configured (secret key present) but price ID is missing

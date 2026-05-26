@@ -28,7 +28,7 @@ export class MailController {
   constructor(
     private readonly mail: MailService,
     private readonly config: ConfigService,
-    @Inject(STRIPE_CLIENT) private readonly stripe: Stripe,
+    @Inject(STRIPE_CLIENT) private readonly stripe: Stripe.Stripe,
   ) {}
 
   /**
@@ -60,7 +60,7 @@ export class MailController {
     }
 
     // 2. Recupera e valida a sessão no Stripe
-    let session: Stripe.Checkout.Session;
+    let session: Awaited<ReturnType<Stripe.Stripe['checkout']['sessions']['retrieve']>>;
     try {
       session = await this.stripe.checkout.sessions.retrieve(dto.sessionId);
     } catch (err) {

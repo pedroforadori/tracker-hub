@@ -18,7 +18,7 @@ export const STRIPE_CLIENT = Symbol('STRIPE_CLIENT');
     {
       provide: STRIPE_CLIENT,
       inject: [ConfigService],
-      useFactory: (config: ConfigService): Stripe =>
+      useFactory: (config: ConfigService): Stripe.Stripe =>
         new Stripe(config.getOrThrow<string>('STRIPE_SECRET_KEY')),
     },
   ],
