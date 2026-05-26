@@ -21,7 +21,7 @@ import { MailService } from './mail.service';
           },
         },
         defaults: {
-          from: '"Tracker Hub" <noreply@trackerhub.com.br>',
+          from: config.get<string>('RESEND_FROM', '"Tracker Hub" <noreply@trackerhub.com.br>'),
         },
         template: {
           dir: join(__dirname, 'templates'),

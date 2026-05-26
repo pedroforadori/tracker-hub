@@ -1,14 +1,9 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
-import { invalidateBillingCache } from '../../auth/jwt-auth.guard';
+import { BillingCacheEntry, BillingCacheService } from './billing-cache.service';
 import { BillingRepository } from './billing.repository';
 import { MailService } from '../mail/mail.service';
-
-// Tracks Stripe event IDs processed in the current process lifetime to prevent double-processing
-// on webhook retries. Bounded to avoid unbounded memory growth.
-const processedEvents = new Set<string>();
-const MAX_PROCESSED_EVENTS = 2000;
 
 @Injectable()
 export class BillingService {
@@ -19,6 +14,7 @@ export class BillingService {
     private readonly repo: BillingRepository,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly cache: BillingCacheService,
   ) {
     this.stripe = new Stripe(this.config.getOrThrow<string>('STRIPE_SECRET_KEY'));
 
@@ -29,6 +25,40 @@ export class BillingService {
         'STRIPE_PRICE_ID is not set — subscription creation will be skipped. ' +
           'Set this variable in production to enable billing.',
       );
+    }
+  }
+
+  /**
+   * Returns the cached billing status for a tenant, refreshing from the DB on a
+   * cache miss. Used by JwtAuthGuard on every authenticated request.
+   */
+  async getBillingStatusCached(tenantId: string): Promise<BillingCacheEntry | null> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+
+    const tenant = await this.repo.findById(tenantId);
+    if (!tenant) return null;
+
+    const entry: BillingCacheEntry = {
+      planStatus: tenant.planStatus,
+      blockReason: tenant.blockReason,
+      gracePeriodEndsAt: tenant.gracePeriodEndsAt,
+    };
+    this.cache.set(tenantId, entry);
+    return entry;
+  }
+
+  /**
+   * Promotes a PAST_DUE tenant whose grace period has expired to BLOCKED.
+   * Called fire-and-forget from JwtAuthGuard — errors are logged but not thrown.
+   */
+  async promoteExpiredToBlocked(tenantId: string): Promise<void> {
+    try {
+      await this.repo.setBlocked(tenantId);
+      this.cache.invalidate(tenantId);
+      this.logger.log(`Tenant ${tenantId} promoted to BLOCKED (grace period expired)`);
+    } catch (err) {
+      this.logger.error(`Failed to promote tenant ${tenantId} to BLOCKED`, err);
     }
   }
 
@@ -79,15 +109,14 @@ export class BillingService {
       throw new BadRequestException('Stripe customer or subscription not found.');
     }
 
-    // Verify that the payment method is not already attached to a different customer (IDOR guard)
+    // Security: only accept PMs that are already attached to this customer.
+    // In the normal flow, the PM is attached to the customer automatically when
+    // the client calls stripe.confirmCardSetup() with a SetupIntent created for
+    // this customer — so pm.customer should equal stripeCustomerId at this point.
     const pm = await this.stripe.paymentMethods.retrieve(paymentMethodId);
-    if (pm.customer && pm.customer !== tenant.stripeCustomerId) {
+    if (pm.customer !== tenant.stripeCustomerId) {
       throw new BadRequestException('Payment method does not belong to this customer.');
     }
-
-    await this.stripe.paymentMethods.attach(paymentMethodId, {
-      customer: tenant.stripeCustomerId,
-    });
 
     await this.stripe.customers.update(tenant.stripeCustomerId, {
       invoice_settings: { default_payment_method: paymentMethodId },
@@ -159,15 +188,16 @@ export class BillingService {
       throw new BadRequestException(`Webhook signature verification failed: ${(err as Error).message}`);
     }
 
-    // Idempotency: skip events already processed in this process lifetime
+    // Idempotency: skip events already processed in this process lifetime.
+    // NOTE: not distributed-safe — use a shared store (Redis / DB) for multi-instance deploys.
     const eventId = event.id as string;
-    if (processedEvents.has(eventId)) {
+    if (this.processedEvents.has(eventId)) {
       this.logger.debug(`Skipping duplicate Stripe event: ${eventId}`);
       return;
     }
-    processedEvents.add(eventId);
-    if (processedEvents.size > MAX_PROCESSED_EVENTS) {
-      processedEvents.delete(processedEvents.values().next().value as string);
+    this.processedEvents.add(eventId);
+    if (this.processedEvents.size > BillingService.MAX_PROCESSED_EVENTS) {
+      this.processedEvents.delete(this.processedEvents.values().next().value as string);
     }
 
     const obj = event.data?.object as Record<string, unknown> | undefined;
@@ -186,7 +216,7 @@ export class BillingService {
           'Cobrança recusada pelo banco emissor do cartão';
 
         await this.repo.setPastDue(tenant.id, reason);
-        invalidateBillingCache(tenant.id);
+        this.cache.invalidate(tenant.id);
 
         const admin = await this.repo.findAdminEmail(tenant.id);
         if (admin?.email) {
@@ -203,19 +233,19 @@ export class BillingService {
         const tenant = await this.repo.findByStripeSubscriptionId(subscriptionId);
         if (tenant) {
           await this.repo.setActive(tenant.id);
-          invalidateBillingCache(tenant.id);
+          this.cache.invalidate(tenant.id);
         }
         break;
       }
 
       case 'customer.subscription.deleted': {
-        const subscriptionId = this.extractId(obj['id'] ?? obj);
+        const subscriptionId = this.extractId(obj['id']);
         if (!subscriptionId) break;
 
         const tenant = await this.repo.findByStripeSubscriptionId(subscriptionId);
         if (tenant) {
           await this.repo.setBlocked(tenant.id);
-          invalidateBillingCache(tenant.id);
+          this.cache.invalidate(tenant.id);
         }
         break;
       }
@@ -224,6 +254,10 @@ export class BillingService {
         this.logger.debug(`Unhandled Stripe event: ${event.type as string}`);
     }
   }
+
+  // Bounded in-memory set for per-process webhook idempotency
+  private readonly processedEvents = new Set<string>();
+  private static readonly MAX_PROCESSED_EVENTS = 2000;
 
   private extractId(value: unknown): string | null {
     if (typeof value === 'string') return value;

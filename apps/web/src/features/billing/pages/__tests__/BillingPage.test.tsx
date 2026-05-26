@@ -1,82 +1,153 @@
-import { http, HttpResponse } from 'msw'
-import { render, screen, waitFor } from '@testing-library/react'
+import { Suspense } from 'react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
-import { server } from '@/test/msw/server'
-import { activeStatus, blockedStatus, pastDueStatus, trialingStatus } from '@/test/fixtures/billing.fixtures'
-import { BillingPage } from '../BillingPage'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  activeStatus,
+  blockedStatus,
+  pastDueStatus,
+  trialingStatus,
+} from '@/test/fixtures/billing.fixtures'
 
-const BASE = 'http://localhost:3333'
+// Mock billingApi BEFORE importing BillingPage so the module-level promise is
+// created against the mock (same pattern as CustomersPage tests).
+const mockGetStatus = vi.fn().mockResolvedValue(activeStatus)
+const mockCreateSetupIntent = vi.fn()
+const mockUpdatePaymentMethod = vi.fn()
 
-vi.mock('../../components/CardUpdateForm', () => ({
-  CardUpdateForm: () => <div data-testid="card-update-form" />,
+vi.mock('../../api/billing.api', () => ({
+  billingApi: {
+    getStatus: () => mockGetStatus(),
+    createSetupIntent: () => mockCreateSetupIntent(),
+    updatePaymentMethod: (id: string) => mockUpdatePaymentMethod(id),
+  },
 }))
 
-function renderPage() {
-  return render(<MemoryRouter><BillingPage /></MemoryRouter>)
+vi.mock('../../components/CardUpdateForm', () => ({
+  CardUpdateForm: ({ onSuccess }: { onSuccess?: () => void }) => (
+    <div data-testid="card-update-form">
+      <button onClick={onSuccess}>mock-success</button>
+    </div>
+  ),
+}))
+
+// Dynamic import AFTER mocks are set up — ensures the module-level promise is
+// created with the mocked billingApi (same pattern as CustomersPage).
+const { BillingContent, __resetStatusPromise } = await import('../BillingPage')
+
+beforeEach(() => {
+  mockGetStatus.mockReset()
+  mockGetStatus.mockResolvedValue(activeStatus)
+  __resetStatusPromise()
+})
+
+/**
+ * Renders BillingContent inside a Suspense boundary and flushes all pending
+ * React 19 async operations (promise resolutions, concurrent updates) via
+ * `act()` before returning. Required because React 19's `use()` hook may
+ * schedule re-renders outside of the synchronous render cycle.
+ */
+async function renderContent(onRefresh = vi.fn()) {
+  let result: ReturnType<typeof render>
+  await act(async () => {
+    result = render(
+      <MemoryRouter>
+        <Suspense fallback={<div>Carregando...</div>}>
+          <BillingContent onRefresh={onRefresh} />
+        </Suspense>
+      </MemoryRouter>,
+    )
+  })
+  return result!
 }
 
-describe('BillingPage', () => {
-  it('exibe "Carregando..." inicialmente', () => {
-    renderPage()
+describe('BillingPage — BillingContent', () => {
+  it('exibe "Carregando..." enquanto a promise resolve (Suspense fallback)', async () => {
+    // Never-resolving promise keeps Suspense in fallback state
+    mockGetStatus.mockImplementation(() => new Promise(() => {}))
+    __resetStatusPromise()
+    // Do NOT await act — check synchronously before promise resolves
+    render(
+      <MemoryRouter>
+        <Suspense fallback={<div>Carregando...</div>}>
+          <BillingContent onRefresh={vi.fn()} />
+        </Suspense>
+      </MemoryRouter>,
+    )
     expect(screen.getByText(/carregando/i)).toBeInTheDocument()
   })
 
   it('status ACTIVE → badge "Ativo"', async () => {
-    renderPage()
-    await waitFor(() => expect(screen.getByText('Ativo')).toBeInTheDocument())
+    await renderContent()
+    expect(screen.getByText('Ativo')).toBeInTheDocument()
   })
 
   it('status TRIALING → badge "Período de teste" + dias restantes', async () => {
-    server.use(http.get(`${BASE}/billing/status`, () => HttpResponse.json(trialingStatus)))
-    renderPage()
-    await waitFor(() => {
-      expect(screen.getByText('Período de teste')).toBeInTheDocument()
-      expect(screen.getByText(/dias/i)).toBeInTheDocument()
-    })
+    mockGetStatus.mockResolvedValue(trialingStatus)
+    __resetStatusPromise()
+    await renderContent()
+    expect(screen.getByText('Período de teste')).toBeInTheDocument()
+    expect(screen.getByText(/dias/i)).toBeInTheDocument()
   })
 
   it('status PAST_DUE → badge "Pagamento pendente" + motivo', async () => {
-    server.use(http.get(`${BASE}/billing/status`, () => HttpResponse.json(pastDueStatus)))
-    renderPage()
-    await waitFor(() => {
-      expect(screen.getByText('Pagamento pendente')).toBeInTheDocument()
-      expect(screen.getByText(pastDueStatus.blockReason!)).toBeInTheDocument()
-    })
+    mockGetStatus.mockResolvedValue(pastDueStatus)
+    __resetStatusPromise()
+    await renderContent()
+    expect(screen.getByText('Pagamento pendente')).toBeInTheDocument()
+    expect(screen.getByText(pastDueStatus.blockReason!)).toBeInTheDocument()
   })
 
   it('status BLOCKED → badge "Bloqueado" + blockReason', async () => {
-    server.use(http.get(`${BASE}/billing/status`, () => HttpResponse.json(blockedStatus)))
-    renderPage()
-    await waitFor(() => {
-      expect(screen.getByText('Bloqueado')).toBeInTheDocument()
-      expect(screen.getByText(blockedStatus.blockReason!)).toBeInTheDocument()
-    })
+    mockGetStatus.mockResolvedValue(blockedStatus)
+    __resetStatusPromise()
+    await renderContent()
+    expect(screen.getByText('Bloqueado')).toBeInTheDocument()
+    expect(screen.getByText(blockedStatus.blockReason!)).toBeInTheDocument()
   })
 
   it('com cartão → exibe "Visa •••• 4242"', async () => {
-    renderPage()
-    await waitFor(() => expect(screen.getByText('Visa •••• 4242')).toBeInTheDocument())
+    await renderContent()
+    expect(screen.getByText('Visa •••• 4242')).toBeInTheDocument()
   })
 
   it('sem cartão → exibe "Nenhum cartão cadastrado"', async () => {
-    server.use(http.get(`${BASE}/billing/status`, () => HttpResponse.json({ ...activeStatus, lastFour: null, cardBrand: null })))
-    renderPage()
-    await waitFor(() => expect(screen.getByText('Nenhum cartão cadastrado')).toBeInTheDocument())
+    mockGetStatus.mockResolvedValue({ ...activeStatus, lastFour: null, cardBrand: null })
+    __resetStatusPromise()
+    await renderContent()
+    expect(screen.getByText('Nenhum cartão cadastrado')).toBeInTheDocument()
   })
 
   it('botão "Trocar cartão" → exibe CardUpdateForm', async () => {
     const user = userEvent.setup()
-    renderPage()
-    await waitFor(() => screen.getByRole('button', { name: /trocar cartão/i }))
+    await renderContent()
     await user.click(screen.getByRole('button', { name: /trocar cartão/i }))
     expect(screen.getByTestId('card-update-form')).toBeInTheDocument()
   })
 
   it('sem cartão → botão "Adicionar cartão"', async () => {
-    server.use(http.get(`${BASE}/billing/status`, () => HttpResponse.json({ ...activeStatus, lastFour: null, cardBrand: null })))
-    renderPage()
-    await waitFor(() => expect(screen.getByRole('button', { name: /adicionar cartão/i })).toBeInTheDocument())
+    mockGetStatus.mockResolvedValue({ ...activeStatus, lastFour: null, cardBrand: null })
+    __resetStatusPromise()
+    await renderContent()
+    expect(screen.getByRole('button', { name: /adicionar cartão/i })).toBeInTheDocument()
+  })
+
+  it('erro na API → exibe mensagem de erro com botão "Tentar novamente"', async () => {
+    mockGetStatus.mockRejectedValue(new Error('Network error'))
+    __resetStatusPromise()
+    await renderContent()
+    expect(screen.getByText(/não foi possível carregar/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tentar novamente/i })).toBeInTheDocument()
+  })
+
+  it('"Tentar novamente" chama onRefresh', async () => {
+    const user = userEvent.setup()
+    const onRefresh = vi.fn()
+    mockGetStatus.mockRejectedValue(new Error('fail'))
+    __resetStatusPromise()
+    await renderContent(onRefresh)
+    await user.click(screen.getByRole('button', { name: /tentar novamente/i }))
+    expect(onRefresh).toHaveBeenCalledOnce()
   })
 })
