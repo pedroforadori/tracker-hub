@@ -33,7 +33,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @Post('forgot-password')
   @HttpCode(200)
   @ApiOperation({ summary: 'Solicitar redefinição de senha por e-mail' })
