@@ -1,21 +1,23 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
   constructor() {
-    const datasourceUrl = process.env.DATABASE_URL;
+    const connectionString = process.env.DATABASE_URL;
 
-    if (!datasourceUrl) {
+    if (!connectionString) {
       throw new Error(
         'Missing DATABASE_URL environment variable. Set it in your .env file.',
       );
     }
 
-    // Pass the connection URL explicitly via `datasourceUrl` instead of
-    // relying on the `url` property in schema.prisma (removed in engines v7+
-    // when prisma.config.ts is present).
-    super({ datasourceUrl });
+    // The adapter replaces the `url` property that was previously read from
+    // schema.prisma. With `prisma.config.ts` present, the datasource block
+    // no longer accepts `url` (engines v7+), so the connection is passed here.
+    const adapter = new PrismaPg(connectionString);
+    super({ adapter });
   }
 
   async onModuleInit() {

@@ -2,18 +2,17 @@ import path from 'node:path';
 import { defineConfig } from 'prisma/config';
 
 /**
- * Prisma configuration file — required from Prisma engines v7+.
+ * Prisma 7 configuration.
  *
- * The `url` / `directUrl` properties were removed from the `datasource` block in
- * schema.prisma when `prisma.config.ts` is present. Connection URLs must be
- * provided here instead.
+ * A partir do Prisma 7, `url` e `directUrl` foram removidos do bloco `datasource`
+ * no schema.prisma. As URLs de conexão são fornecidas aqui via driver adapter.
  *
- * `engine: 'classic'` keeps the battle-tested Rust-based schema engine for
- * migrations and introspection.
+ * O adapter é usado pelo CLI (`prisma migrate`, `prisma generate`) e pelo runtime
+ * (`PrismaService`). Cada um cria sua própria instância (CLI usa DIRECT_URL quando
+ * disponível para conexão direta; runtime usa DATABASE_URL).
  *
- * - `datasource.url`       → pooler URL used by the schema engine at runtime.
- * - `datasource.directUrl` → direct (non-pooler) URL for migrate/generate
- *                            (required by Supabase; falls back to url if unset).
+ * - DIRECT_URL → conexão direta (non-pooler) para migrate/generate (Supabase).
+ * - DATABASE_URL → pooler URL para runtime (app em produção).
  *
  * @see https://pris.ly/d/config-datasource
  * @see https://pris.ly/d/prisma7-client-config
@@ -21,10 +20,17 @@ import { defineConfig } from 'prisma/config';
 export default defineConfig({
   schema: path.join('prisma', 'schema.prisma'),
 
-  engine: 'classic',
+  adapter: async () => {
+    const { PrismaPg } = await import('@prisma/adapter-pg');
+    const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 
-  datasource: {
-    url: process.env.DATABASE_URL ?? '',
-    directUrl: process.env.DIRECT_URL,
+    if (!connectionString) {
+      throw new Error(
+        'Missing database connection string. ' +
+          'Set DIRECT_URL (preferred for migrations) or DATABASE_URL in your .env file.',
+      );
+    }
+
+    return new PrismaPg(connectionString);
   },
 });
