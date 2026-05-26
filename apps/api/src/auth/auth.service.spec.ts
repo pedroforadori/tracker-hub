@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -233,12 +233,11 @@ describe('AuthService', () => {
       );
     });
 
-    it('retorna { ok: true } silenciosamente quando o e-mail não existe', async () => {
+    it('lança NotFoundException quando o e-mail não existe na base', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      const result = await service.forgotPassword({ email: 'naoexiste@test.com' });
-
-      expect(result).toEqual({ ok: true });
+      await expect(service.forgotPassword({ email: 'naoexiste@test.com' }))
+        .rejects.toThrow(NotFoundException);
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
       expect(mockMail.sendPasswordReset).not.toHaveBeenCalled();
     });
