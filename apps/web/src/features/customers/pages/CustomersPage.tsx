@@ -8,18 +8,28 @@ import { customersApi } from '../api/customers.api'
 import { CustomerForm, type CustomerFormData } from '../components/CustomerForm'
 
 function CustomersList({
-  customers,
+  statusOverrides,
   pendingIds,
   onEdit,
   onDelete,
   onStatusChange,
 }: {
-  customers: Customer[]
+  statusOverrides: Record<string, CustomerStatus>
   pendingIds: Set<string>
   onEdit: (c: Customer) => void
   onDelete: (id: string) => void
   onStatusChange: (id: string, status: CustomerStatus) => void
 }) {
+  // use() fica no filho para que apenas a lista suspenda, e não a página inteira.
+  // Isso preserva o header e o formulário aberto durante um refetch.
+  const serverCustomers = use(getCustomersPromise())
+
+  // Aplica overrides otimistas sobre os dados do servidor.
+  const customers = serverCustomers.map((c) => ({
+    ...c,
+    status: statusOverrides[c.id] ?? c.status,
+  }))
+
   if (!customers.length) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
@@ -80,7 +90,6 @@ function CustomersList({
 }
 
 export function CustomersPage() {
-  const serverCustomers = use(getCustomersPromise())
   const [statusOverrides, setStatusOverrides] = useState<Record<string, CustomerStatus>>({})
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
 
@@ -90,11 +99,6 @@ export function CustomersPage() {
       setStatusOverrides({})
     })
 
-  const customers = serverCustomers.map((c) => ({
-    ...c,
-    status: statusOverrides[c.id] ?? c.status,
-  }))
-
   const handleSubmit = async (data: CustomerFormData) => {
     if (editing) await customersApi.update(editing.id, data)
     else await customersApi.create(data)
@@ -102,15 +106,16 @@ export function CustomersPage() {
   }
 
   const handleStatusChange = async (id: string, status: CustomerStatus) => {
+    // Atualização otimista imediata para feedback visual instantâneo.
     setStatusOverrides(prev => ({ ...prev, [id]: status }))
     setPendingIds(prev => new Set(prev).add(id))
     try {
       await customersApi.update(id, { status })
+      // Sucesso: patcha o cache sem refetch. Em caso de erro, o finally
+      // remove o override, revertendo para o valor original do servidor.
       patchCustomerStatus(id, status)
-      setStatusOverrides(prev => { const n = { ...prev }; delete n[id]; return n })
-    } catch {
-      setStatusOverrides(prev => { const n = { ...prev }; delete n[id]; return n })
     } finally {
+      setStatusOverrides(prev => { const n = { ...prev }; delete n[id]; return n })
       setPendingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
   }
@@ -142,7 +147,7 @@ export function CustomersPage() {
         </div>
       ) : (
         <CustomersList
-          customers={customers}
+          statusOverrides={statusOverrides}
           pendingIds={pendingIds}
           onEdit={handleEdit}
           onDelete={(id) => handleDelete(id, 'Confirma exclusão do cliente? Todos os veículos vinculados serão removidos.')}
