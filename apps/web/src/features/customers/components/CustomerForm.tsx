@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { PatternFormat } from 'react-number-format'
+import { NumericFormat, PatternFormat } from 'react-number-format'
 import { z } from 'zod'
 import { FormField } from '@/components/molecules/FormField'
 import { FormActions } from '@/components/molecules/FormActions'
@@ -13,6 +13,8 @@ const schema = z.object({
   cnpj: f.cnpj,
   email: f.email,
   phone: f.phone,
+  monthlyFee: z.number({ invalid_type_error: 'Informe o valor da mensalidade' }).min(0, 'Valor inválido'),
+  status: z.enum(['ATIVO', 'INATIVO']),
 })
 
 export type CustomerFormData = z.infer<typeof schema>
@@ -39,6 +41,8 @@ export function CustomerForm({ initialData, onSubmit, onCancel }: CustomerFormPr
       cnpj: initialData?.cnpj ?? '',
       email: initialData?.email ?? '',
       phone: initialData?.phone ?? '',
+      monthlyFee: initialData?.monthlyFee ?? undefined,
+      status: initialData?.status ?? 'ATIVO',
     },
   })
 
@@ -75,6 +79,42 @@ export function CustomerForm({ initialData, onSubmit, onCancel }: CustomerFormPr
           className={INPUT_BASE}
         />
       </FormField>
+
+      <div className="grid grid-cols-2 gap-4">
+        <FormField label="Mensalidade" htmlFor="monthlyFee" error={errors.monthlyFee?.message} required>
+          <NumericFormat
+            id="monthlyFee"
+            decimalScale={2}
+            fixedDecimalScale
+            decimalSeparator=","
+            thousandSeparator="."
+            prefix="R$ "
+            allowNegative={false}
+            defaultValue={initialData?.monthlyFee}
+            onValueChange={(v) => setValue('monthlyFee', v.floatValue ?? 0, { shouldValidate: true })}
+            placeholder="R$ 0,00"
+            className={INPUT_BASE}
+          />
+        </FormField>
+
+        <FormField label="Status" htmlFor="status" error={errors.status?.message} required>
+          <select id="status" {...register('status')} className={INPUT_BASE}>
+            <option value="ATIVO">Ativo</option>
+            <option value="INATIVO">Inativo</option>
+          </select>
+        </FormField>
+      </div>
+
+      {isEditing && initialData?.createdAt && (
+        <FormField label="Data de Contratação" htmlFor="contractDate">
+          <input
+            id="contractDate"
+            readOnly
+            value={new Date(initialData.createdAt).toLocaleDateString('pt-BR')}
+            className={INPUT_BASE}
+          />
+        </FormField>
+      )}
 
       <FormActions onCancel={onCancel} isSubmitting={isSubmitting} isEditing={isEditing} />
     </form>

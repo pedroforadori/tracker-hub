@@ -2,17 +2,32 @@ import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/com
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { PlanStatus, UserRole } from '@prisma/client';
+import { Observable } from 'rxjs';
 import { PaymentRequiredException } from '../common/exceptions/payment-required.exception';
-import { BillingService } from '../modules/billing/billing.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUser } from '../common/types/current-user.type';
 
 export const IS_PUBLIC_KEY = 'isPublic';
+
+interface BillingCache {
+  planStatus: PlanStatus;
+  blockReason: string | null;
+  gracePeriodEndsAt: Date | null;
+  expiresAt: number;
+}
+
+const billingCache = new Map<string, BillingCache>();
+const CACHE_TTL_MS = 15_000;
+
+export function invalidateBillingCache(tenantId: string): void {
+  billingCache.delete(tenantId);
+}
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
   constructor(
     private reflector: Reflector,
-    private billing: BillingService,
+    private prisma: PrismaService,
   ) {
     super();
   }
@@ -33,16 +48,18 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // Billing check is skipped for billing endpoints to avoid bootstrap problems
     if (req.path?.startsWith('/billing')) return true;
 
-    const billing = await this.billing.getBillingStatusCached(user.tenantId);
+    const billing = await this.getBillingStatus(user.tenantId);
     if (!billing) return true;
 
     const { planStatus, blockReason, gracePeriodEndsAt } = billing;
 
-    // Grace period expired — promote to BLOCKED asynchronously (fire-and-forget)
-    // and block this request immediately. The guard intentionally does not write
-    // to the DB directly; promotion is delegated to BillingService.
+    // Grace period expired — promote to BLOCKED
     if (planStatus === PlanStatus.PAST_DUE && gracePeriodEndsAt && gracePeriodEndsAt < new Date()) {
-      void this.billing.promoteExpiredToBlocked(user.tenantId);
+      await this.prisma.tenant.update({
+        where: { id: user.tenantId },
+        data: { planStatus: PlanStatus.BLOCKED, blockedAt: new Date() },
+      });
+      billingCache.delete(user.tenantId);
       this.throwBlocked(user.role, blockReason);
     }
 
@@ -72,5 +89,25 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         ? `Pagamento falhou: ${blockReason ?? 'entre em contato com o suporte'}. Atualize seu cartão para retomar o acesso.`
         : 'Acesso bloqueado, contate o administrador da conta.';
     throw new PaymentRequiredException(message);
+  }
+
+  private async getBillingStatus(tenantId: string): Promise<BillingCache | null> {
+    const cached = billingCache.get(tenantId);
+    if (cached && cached.expiresAt > Date.now()) return cached;
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { planStatus: true, blockReason: true, gracePeriodEndsAt: true },
+    });
+    if (!tenant) return null;
+
+    const entry: BillingCache = {
+      planStatus: tenant.planStatus,
+      blockReason: tenant.blockReason,
+      gracePeriodEndsAt: tenant.gracePeriodEndsAt,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    };
+    billingCache.set(tenantId, entry);
+    return entry;
   }
 }

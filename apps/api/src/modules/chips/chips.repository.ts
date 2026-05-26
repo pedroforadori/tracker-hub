@@ -26,6 +26,10 @@ export class ChipsRepository {
     return this.prisma.chip.update({ where: { id, tenantId }, data: dto });
   }
 
+  findByTrackerId(trackerId: string, tenantId: string) {
+    return this.prisma.chip.findFirst({ where: { trackerId, tenantId } });
+  }
+
   remove(id: string, tenantId: string) {
     return this.prisma.chip.delete({ where: { id, tenantId } });
   }

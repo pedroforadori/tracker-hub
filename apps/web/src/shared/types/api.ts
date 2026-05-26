@@ -14,7 +14,7 @@ export interface BillingStatus {
 export interface AuthUser {
   id: string
   email: string
-  name?: string
+  name: string
   role: UserRole
   tenantId: string
 }
@@ -24,12 +24,16 @@ export interface AuthResponse {
   user: AuthUser
 }
 
+export type CustomerStatus = 'ATIVO' | 'INATIVO'
+
 export interface Customer {
   id: string
   name: string
   cnpj: string
   email: string
   phone: string
+  monthlyFee: number
+  status: CustomerStatus
   tenantId: string
   createdAt: string
 }

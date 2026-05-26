@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, Length } from 'class-validator';
+import { CustomerStatus } from '@prisma/client';
+import { IsEmail, IsEnum, IsNumber, IsOptional, IsString, Length, Min } from 'class-validator';
 
 export class CreateCustomerDto {
   @ApiProperty({ example: 'Transportes Silva Ltda' })
@@ -18,4 +19,14 @@ export class CreateCustomerDto {
   @ApiProperty({ example: '11999999999' })
   @IsString()
   phone: string;
+
+  @ApiProperty({ example: 299.9 })
+  @IsNumber()
+  @Min(0)
+  monthlyFee: number;
+
+  @ApiProperty({ enum: CustomerStatus, default: CustomerStatus.ATIVO })
+  @IsOptional()
+  @IsEnum(CustomerStatus)
+  status?: CustomerStatus;
 }

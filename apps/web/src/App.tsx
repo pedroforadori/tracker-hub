@@ -3,10 +3,15 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@/components/atoms/ThemeProvider'
 import { BillingGate } from '@/features/billing/components/BillingGate'
 import { TableSkeleton } from '@/shared/components/LoadingSkeleton'
+import { DashboardSkeleton } from './features/dashboard/components/DashboardSkeleton'
 import { MainLayout } from '@/shared/components/MainLayout'
 import { ProtectedRoute } from '@/shared/components/ProtectedRoute'
 import { LoginPage } from './features/auth/pages/LoginPage'
+import { RegisterPage } from './features/auth/pages/RegisterPage'
 
+const DashboardPage = lazy(() =>
+  import('./features/dashboard/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+)
 const CustomersPage = lazy(() =>
   import('./features/customers/pages/CustomersPage').then((m) => ({ default: m.CustomersPage })),
 )
@@ -25,6 +30,9 @@ const TeamPage = lazy(() =>
 const BillingPage = lazy(() =>
   import('./features/billing/pages/BillingPage').then((m) => ({ default: m.BillingPage })),
 )
+const ProfilePage = lazy(() =>
+  import('./features/profile/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })),
+)
 
 function App() {
   return (
@@ -33,11 +41,20 @@ function App() {
         <BillingGate>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/cadastro" element={<RegisterPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
-                <Route index element={<Navigate to="/customers" replace />} />
+                <Route index element={<Navigate to="/dashboard" replace />} />
 
+                <Route
+                  path="/dashboard"
+                  element={
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <DashboardPage />
+                    </Suspense>
+                  }
+                />
                 <Route
                   path="/customers"
                   element={
@@ -67,6 +84,14 @@ function App() {
                   element={
                     <Suspense fallback={<TableSkeleton />}>
                       <ChipsPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <Suspense fallback={<TableSkeleton />}>
+                      <ProfilePage />
                     </Suspense>
                   }
                 />

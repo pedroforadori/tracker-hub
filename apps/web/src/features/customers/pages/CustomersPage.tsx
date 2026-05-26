@@ -1,21 +1,25 @@
 'use client'
-import { use } from 'react'
+import { use, useState } from 'react'
+import { Switch } from '@/components/atoms/Switch'
 import { useEntityList } from '@/shared/hooks/useEntityList'
-import type { Customer } from '@/shared/types/api'
+import type { Customer, CustomerStatus } from '@/shared/types/api'
+import { getCustomersPromise, invalidateCustomers, patchCustomerStatus } from '@/shared/store/entityPromises'
 import { customersApi } from '../api/customers.api'
 import { CustomerForm, type CustomerFormData } from '../components/CustomerForm'
 
-let customersPromise = customersApi.getAll()
-
 function CustomersList({
+  customers,
+  pendingIds,
   onEdit,
   onDelete,
+  onStatusChange,
 }: {
+  customers: Customer[]
+  pendingIds: Set<string>
   onEdit: (c: Customer) => void
   onDelete: (id: string) => void
+  onStatusChange: (id: string, status: CustomerStatus) => void
 }) {
-  const customers = use(customersPromise)
-
   if (!customers.length) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
@@ -30,31 +34,45 @@ function CustomersList({
         <thead>
           <tr className="border-b border-border text-left text-muted-foreground">
             <th className="py-3 pr-4 font-medium">Nome</th>
-            <th className="py-3 pr-4 font-medium">CNPJ</th>
             <th className="py-3 pr-4 font-medium">E-mail</th>
-            <th className="py-3 pr-4 font-medium">Telefone</th>
+            <th className="py-3 pr-4 font-medium">Mensalidade</th>
+            <th className="py-3 pr-4 font-medium">Status</th>
             <th className="py-3 font-medium">Ações</th>
           </tr>
         </thead>
         <tbody>
-          {customers.map((c) => (
-            <tr key={c.id} className="border-b border-border hover:bg-muted/30">
-              <td className="py-3 pr-4 font-medium">{c.name}</td>
-              <td className="py-3 pr-4 text-muted-foreground">{c.cnpj}</td>
-              <td className="py-3 pr-4">{c.email}</td>
-              <td className="py-3 pr-4">{c.phone}</td>
-              <td className="py-3">
-                <div className="flex gap-2">
-                  <button onClick={() => onEdit(c)} className="text-xs underline hover:text-primary">
-                    Editar
-                  </button>
-                  <button onClick={() => onDelete(c.id)} className="text-xs text-destructive underline hover:opacity-80">
-                    Excluir
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+          {customers.map((c) => {
+            const isAtivo = c.status === 'ATIVO'
+            return (
+              <tr key={c.id} className="border-b border-border hover:bg-muted/30">
+                <td className="py-3 pr-4 font-medium">{c.name}</td>
+                <td className="py-3 pr-4">{c.email}</td>
+                <td className="py-3 pr-4">
+                  {Number(c.monthlyFee).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </td>
+                <td className="py-3 pr-4">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={isAtivo}
+                      disabled={pendingIds.has(c.id)}
+                      onChange={(checked) => onStatusChange(c.id, checked ? 'ATIVO' : 'INATIVO')}
+                    />
+                    <span className="text-xs text-muted-foreground">{isAtivo ? 'Ativo' : 'Inativo'}</span>
+                  </div>
+                </td>
+                <td className="py-3">
+                  <div className="flex gap-2">
+                    <button onClick={() => onEdit(c)} className="text-xs underline hover:text-primary">
+                      Editar
+                    </button>
+                    <button onClick={() => onDelete(c.id)} className="text-xs text-destructive underline hover:opacity-80">
+                      Excluir
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -62,8 +80,20 @@ function CustomersList({
 }
 
 export function CustomersPage() {
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
-    useEntityList<Customer>(customersApi.remove, () => { customersPromise = customersApi.getAll() })
+  const serverCustomers = use(getCustomersPromise())
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, CustomerStatus>>({})
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
+
+  const { showForm, setShowForm, editing, setEditing, handleEdit, handleCancel, afterSubmit, handleDelete } =
+    useEntityList<Customer>(customersApi.remove, () => {
+      invalidateCustomers()
+      setStatusOverrides({})
+    })
+
+  const customers = serverCustomers.map((c) => ({
+    ...c,
+    status: statusOverrides[c.id] ?? c.status,
+  }))
 
   const handleSubmit = async (data: CustomerFormData) => {
     if (editing) await customersApi.update(editing.id, data)
@@ -71,8 +101,22 @@ export function CustomersPage() {
     afterSubmit()
   }
 
+  const handleStatusChange = async (id: string, status: CustomerStatus) => {
+    setStatusOverrides(prev => ({ ...prev, [id]: status }))
+    setPendingIds(prev => new Set(prev).add(id))
+    try {
+      await customersApi.update(id, { status })
+      patchCustomerStatus(id, status)
+      setStatusOverrides(prev => { const n = { ...prev }; delete n[id]; return n })
+    } catch {
+      setStatusOverrides(prev => { const n = { ...prev }; delete n[id]; return n })
+    } finally {
+      setPendingIds(prev => { const n = new Set(prev); n.delete(id); return n })
+    }
+  }
+
   return (
-    <div className="space-y-6" key={refresh}>
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Clientes</h1>
         {!showForm && (
@@ -98,8 +142,11 @@ export function CustomersPage() {
         </div>
       ) : (
         <CustomersList
+          customers={customers}
+          pendingIds={pendingIds}
           onEdit={handleEdit}
           onDelete={(id) => handleDelete(id, 'Confirma exclusão do cliente? Todos os veículos vinculados serão removidos.')}
+          onStatusChange={handleStatusChange}
         />
       )}
     </div>

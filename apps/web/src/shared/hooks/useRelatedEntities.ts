@@ -7,7 +7,11 @@ export function useRelatedEntities<T>(fetcher: () => Promise<T[]>): T[] {
   const fetcherRef = useRef(fetcher)
 
   useEffect(() => {
-    fetcherRef.current().then(setItems).catch((err) => console.error('[useRelatedEntities]', err))
+    let mounted = true
+    fetcherRef.current()
+      .then((data) => { if (mounted) setItems(data) })
+      .catch((err) => { if (mounted) console.error('[useRelatedEntities]', err) })
+    return () => { mounted = false }
   }, [])
 
   return items
