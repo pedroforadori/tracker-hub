@@ -2,17 +2,17 @@ import path from 'node:path';
 import { defineConfig } from 'prisma/config';
 
 /**
- * Prisma 7 configuration.
+ * Prisma 7 CLI configuration.
  *
- * A partir do Prisma 7, `url` e `directUrl` foram removidos do bloco `datasource`
- * no schema.prisma. As URLs de conexão são fornecidas aqui via driver adapter.
+ * No Prisma 7, `url` e `directUrl` saíram do bloco `datasource` do schema.prisma
+ * e passam a ser configurados aqui. Esta configuração é usada apenas pelo CLI
+ * (`prisma generate`, `prisma migrate`) — não pelo PrismaClient em runtime.
  *
- * O adapter é usado pelo CLI (`prisma migrate`, `prisma generate`) e pelo runtime
- * (`PrismaService`). Cada um cria sua própria instância (CLI usa DIRECT_URL quando
- * disponível para conexão direta; runtime usa DATABASE_URL).
+ * O PrismaClient em runtime recebe o adapter diretamente no constructor
+ * (ver `src/prisma/prisma.service.ts`).
  *
  * - DIRECT_URL → conexão direta (non-pooler) para migrate/generate (Supabase).
- * - DATABASE_URL → pooler URL para runtime (app em produção).
+ * - DATABASE_URL → fallback para dev local / Docker.
  *
  * @see https://pris.ly/d/config-datasource
  * @see https://pris.ly/d/prisma7-client-config
@@ -20,17 +20,7 @@ import { defineConfig } from 'prisma/config';
 export default defineConfig({
   schema: path.join('prisma', 'schema.prisma'),
 
-  adapter: async () => {
-    const { PrismaPg } = await import('@prisma/adapter-pg');
-    const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
-
-    if (!connectionString) {
-      throw new Error(
-        'Missing database connection string. ' +
-          'Set DIRECT_URL (preferred for migrations) or DATABASE_URL in your .env file.',
-      );
-    }
-
-    return new PrismaPg(connectionString);
+  datasource: {
+    url: process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? '',
   },
 });

@@ -100,7 +100,7 @@ src/
 
 **User limit logic** (`users.service.ts`): count USERs in tenant, throw `ForbiddenException` if >= 3.  
 **Prisma schema:** models `Tenant`, `User`, `Customer`, `Vehicle`, `Tracker`, `Chip` — all with `tenantId`. `Tenant` also carries `planStatus` (enum: `TRIALING | ACTIVE | PAST_DUE | BLOCKED | CANCELED`), Stripe IDs, and grace period fields.  
-**Prisma 7 — driver adapter obrigatório:** `url` e `directUrl` foram removidos do bloco `datasource` no `schema.prisma`. As URLs de conexão agora vivem em `apps/api/prisma.config.ts` via `@prisma/adapter-pg`. O `PrismaService` instancia `PrismaPg` com `DATABASE_URL` e passa o adapter ao `PrismaClient`. Para migrations/generate, o CLI usa `DIRECT_URL` (Supabase non-pooler) com fallback para `DATABASE_URL`.
+**Prisma 7 — driver adapter obrigatório:** `url` e `directUrl` foram removidos do bloco `datasource` no `schema.prisma`. As URLs de conexão agora vivem em `apps/api/prisma.config.ts` via `datasource.url` (usado pelo CLI) e o `PrismaService` instancia `PrismaPg` com `DATABASE_URL` e passa o adapter ao `PrismaClient` (usado em runtime). Para migrations/generate, o CLI usa `DIRECT_URL` (Supabase non-pooler) com fallback para `DATABASE_URL`.
 
 **Billing gate (in `JwtAuthGuard`):** After JWT validation, every request checks the tenant's `planStatus` in Prisma (cached for 15 s in-memory via `billingCache` map). `BLOCKED` tenants get `PaymentRequiredException`. Billing endpoints (`/billing/*`) bypass this check. Call `invalidateBillingCache(tenantId)` after any status change in `BillingService`.
 
