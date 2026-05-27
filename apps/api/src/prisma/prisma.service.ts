@@ -42,6 +42,20 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
 
   async onModuleInit() {
-    await this.$connect();
+    // With Prisma 7 driver adapters, $connect() is optional — the pg.Pool
+    // establishes connections lazily on the first query.
+    // We still attempt early connection so failures surface in logs at startup
+    // rather than silently on the first request, but we swallow the error here
+    // to prevent onModuleInit from rejecting the NestJS bootstrap promise,
+    // which would crash every Vercel cold-start invocation with
+    // FUNCTION_INVOCATION_FAILED before any request is even handled.
+    try {
+      await this.$connect();
+    } catch (err) {
+      PrismaService.logger.error(
+        `pg.Pool initial connection failed — queries will retry on first use. ` +
+          `Cause: ${(err as Error).message}`,
+      );
+    }
   }
 }
