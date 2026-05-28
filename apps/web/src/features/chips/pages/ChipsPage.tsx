@@ -7,7 +7,7 @@ import { ChipForm, type ChipFormData } from '../components/ChipForm'
 
 let chipsPromise = chipsApi.getAll()
 
-function ChipsList({ onEdit, onDelete, deletingId }: { onEdit: (c: Chip) => void; onDelete: (id: string) => void; deletingId: string | null }) {
+function ChipsList({ onEdit, onDelete, deletingIds }: { onEdit: (c: Chip) => void; onDelete: (id: string) => void; deletingIds: Set<string> }) {
   const chips = use(chipsPromise)
 
   if (!chips.length) return <div className="py-12 text-center text-sm text-muted-foreground">Nenhum chip cadastrado.</div>
@@ -35,10 +35,10 @@ function ChipsList({ onEdit, onDelete, deletingId }: { onEdit: (c: Chip) => void
                 <button onClick={() => onEdit(c)} className="text-xs underline hover:text-primary">Editar</button>
                 <button
                   onClick={() => onDelete(c.id)}
-                  disabled={deletingId === c.id}
+                  disabled={deletingIds.has(c.id)}
                   className="text-xs text-destructive underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {deletingId === c.id ? (
+                  {deletingIds.has(c.id) ? (
                     <span className="flex items-center gap-1">
                       <Spinner className="h-3 w-3" />
                       Excluindo...
@@ -57,7 +57,7 @@ function ChipsList({ onEdit, onDelete, deletingId }: { onEdit: (c: Chip) => void
 export function ChipsPage() {
   const [serverError, setServerError] = useState('')
 
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel: baseHandleCancel, afterSubmit, handleDelete, deletingId } =
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel: baseHandleCancel, afterSubmit, handleDelete, deletingIds } =
     useEntityList<Chip>(chipsApi.remove, () => { chipsPromise = chipsApi.getAll() })
 
   const handleCancel = () => {
@@ -101,7 +101,7 @@ export function ChipsPage() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <ChipsList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} deletingId={deletingId} />
+          <ChipsList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} deletingIds={deletingIds} />
         </div>
       )}
     </div>

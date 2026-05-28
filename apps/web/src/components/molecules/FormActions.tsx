@@ -5,10 +5,12 @@ interface FormActionsProps {
   isSubmitting?: boolean
   isEditing?: boolean
   submitLabel?: string
+  loadingLabel?: string
 }
 
-export function FormActions({ onCancel, isSubmitting, isEditing, submitLabel }: FormActionsProps) {
+export function FormActions({ onCancel, isSubmitting, isEditing, submitLabel, loadingLabel }: FormActionsProps) {
   const label = submitLabel ?? (isEditing ? 'Salvar alterações' : 'Cadastrar')
+  const loadingText = loadingLabel ?? 'Salvando...'
 
   return (
     <div className="flex justify-end gap-3 pt-2">
@@ -27,7 +29,7 @@ export function FormActions({ onCancel, isSubmitting, isEditing, submitLabel }: 
         {isSubmitting ? (
           <span className="flex items-center justify-center gap-2">
             <Spinner />
-            Salvando...
+            {loadingText}
           </span>
         ) : label}
       </button>

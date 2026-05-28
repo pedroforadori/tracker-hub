@@ -6,7 +6,7 @@ import { getVehiclesPromise, invalidateVehicles } from '@/shared/store/entityPro
 import { vehiclesApi } from '../api/vehicles.api'
 import { VehicleForm, type VehicleFormData } from '../components/VehicleForm'
 
-function VehiclesList({ onEdit, onDelete, deletingId }: { onEdit: (v: Vehicle) => void; onDelete: (id: string) => void; deletingId: string | null }) {
+function VehiclesList({ onEdit, onDelete, deletingIds }: { onEdit: (v: Vehicle) => void; onDelete: (id: string) => void; deletingIds: Set<string> }) {
   const vehicles = use(getVehiclesPromise())
 
   if (!vehicles.length) {
@@ -36,10 +36,10 @@ function VehiclesList({ onEdit, onDelete, deletingId }: { onEdit: (v: Vehicle) =
                 <button onClick={() => onEdit(v)} className="text-xs underline hover:text-primary">Editar</button>
                 <button
                   onClick={() => onDelete(v.id)}
-                  disabled={deletingId === v.id}
+                  disabled={deletingIds.has(v.id)}
                   className="text-xs text-destructive underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {deletingId === v.id ? (
+                  {deletingIds.has(v.id) ? (
                     <span className="flex items-center gap-1">
                       <Spinner className="h-3 w-3" />
                       Excluindo...
@@ -56,7 +56,7 @@ function VehiclesList({ onEdit, onDelete, deletingId }: { onEdit: (v: Vehicle) =
 }
 
 export function VehiclesPage() {
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, deletingId } =
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, deletingIds } =
     useEntityList<Vehicle>(vehiclesApi.remove, () => { invalidateVehicles() })
 
   const handleSubmit = async (data: VehicleFormData) => {
@@ -84,7 +84,7 @@ export function VehiclesPage() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <VehiclesList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} deletingId={deletingId} />
+          <VehiclesList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} deletingIds={deletingIds} />
         </div>
       )}
     </div>

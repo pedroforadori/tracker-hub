@@ -10,7 +10,7 @@ const MAX_SECONDARY_USERS = 3
 
 let teamPromise = teamApi.getAll()
 
-function TeamList({ onEdit, onDelete, deletingId }: { onEdit: (m: TeamMember) => void; onDelete: (id: string) => void; deletingId: string | null }) {
+function TeamList({ onEdit, onDelete, deletingIds }: { onEdit: (m: TeamMember) => void; onDelete: (id: string) => void; deletingIds: Set<string> }) {
   const members = use(teamPromise)
   const { user: currentUser } = useAuthStore()
 
@@ -63,10 +63,10 @@ function TeamList({ onEdit, onDelete, deletingId }: { onEdit: (m: TeamMember) =>
                       <button onClick={() => onEdit(m)} className="text-xs underline hover:text-primary">Editar</button>
                       <button
                         onClick={() => onDelete(m.id)}
-                        disabled={deletingId === m.id}
+                        disabled={deletingIds.has(m.id)}
                         className="text-xs text-destructive underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {deletingId === m.id ? (
+                        {deletingIds.has(m.id) ? (
                           <span className="flex items-center gap-1">
                             <Spinner className="h-3 w-3" />
                             Removendo...
@@ -86,7 +86,7 @@ function TeamList({ onEdit, onDelete, deletingId }: { onEdit: (m: TeamMember) =>
 }
 
 export function TeamPage() {
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, handleDelete, invalidate, deletingId } =
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, handleDelete, invalidate, deletingIds } =
     useEntityList<TeamMember>(teamApi.remove, () => { teamPromise = teamApi.getAll() })
 
   const handleSubmit = async (data: TeamFormData) => {
@@ -128,7 +128,7 @@ export function TeamPage() {
         <TeamList
           onEdit={handleEdit}
           onDelete={(id) => handleDelete(id, 'Confirma remoção do membro?')}
-          deletingId={deletingId}
+          deletingIds={deletingIds}
         />
       )}
     </div>

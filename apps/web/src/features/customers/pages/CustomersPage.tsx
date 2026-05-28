@@ -11,14 +11,14 @@ import { CustomerForm, type CustomerFormData } from '../components/CustomerForm'
 function CustomersList({
   statusOverrides,
   pendingIds,
-  deletingId,
+  deletingIds,
   onEdit,
   onDelete,
   onStatusChange,
 }: {
   statusOverrides: Record<string, CustomerStatus>
   pendingIds: Set<string>
-  deletingId: string | null
+  deletingIds: Set<string>
   onEdit: (c: Customer) => void
   onDelete: (id: string) => void
   onStatusChange: (id: string, status: CustomerStatus) => void
@@ -80,10 +80,10 @@ function CustomersList({
                     </button>
                     <button
                       onClick={() => onDelete(c.id)}
-                      disabled={deletingId === c.id}
+                      disabled={deletingIds.has(c.id)}
                       className="text-xs text-destructive underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {deletingId === c.id ? (
+                      {deletingIds.has(c.id) ? (
                         <span className="flex items-center gap-1">
                           <Spinner className="h-3 w-3" />
                           Excluindo...
@@ -105,7 +105,9 @@ export function CustomersPage() {
   const [statusOverrides, setStatusOverrides] = useState<Record<string, CustomerStatus>>({})
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
 
-  const { showForm, setShowForm, editing, setEditing, handleEdit, handleCancel, afterSubmit, handleDelete, deletingId } =
+  // refresh não é necessário aqui: invalidateCustomers() atualiza a referência
+  // da promise no entityPromises store, disparando o re-suspend automaticamente.
+  const { showForm, setShowForm, editing, setEditing, handleEdit, handleCancel, afterSubmit, handleDelete, deletingIds } =
     useEntityList<Customer>(customersApi.remove, () => {
       invalidateCustomers()
       setStatusOverrides({})
@@ -161,7 +163,7 @@ export function CustomersPage() {
         <CustomersList
           statusOverrides={statusOverrides}
           pendingIds={pendingIds}
-          deletingId={deletingId}
+          deletingIds={deletingIds}
           onEdit={handleEdit}
           onDelete={(id) => handleDelete(id, 'Confirma exclusão do cliente? Todos os veículos vinculados serão removidos.')}
           onStatusChange={handleStatusChange}

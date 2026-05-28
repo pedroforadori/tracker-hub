@@ -7,7 +7,7 @@ export function useEntityList<T extends { id: string }>(
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<T | null>(null)
   const [refresh, setRefresh] = useState(0)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
 
   // Update refs during render so callbacks always call the latest version,
   // even when callers pass new inline lambdas on every render.
@@ -39,14 +39,18 @@ export function useEntityList<T extends { id: string }>(
 
   const handleDelete = useCallback(async (id: string, confirmMessage = 'Confirma exclusão?') => {
     if (!window.confirm(confirmMessage)) return
-    setDeletingId(id)
+    if (deletingIds.has(id)) return
+    setDeletingIds(prev => new Set(prev).add(id))
     try {
       await removeFnRef.current(id)
       invalidate()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao excluir'
+      alert(message)
     } finally {
-      setDeletingId(null)
+      setDeletingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
-  }, [invalidate])
+  }, [invalidate, deletingIds])
 
-  return { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, invalidate, deletingId }
+  return { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, invalidate, deletingIds }
 }

@@ -7,7 +7,7 @@ import { TrackerForm, type TrackerFormData } from '../components/TrackerForm'
 
 let trackersPromise = trackersApi.getAll()
 
-function TrackersList({ onEdit, onDelete, deletingId }: { onEdit: (t: Tracker) => void; onDelete: (id: string) => void; deletingId: string | null }) {
+function TrackersList({ onEdit, onDelete, deletingIds }: { onEdit: (t: Tracker) => void; onDelete: (id: string) => void; deletingIds: Set<string> }) {
   const trackers = use(trackersPromise)
 
   if (!trackers.length) return <div className="py-12 text-center text-sm text-muted-foreground">Nenhum rastreador cadastrado.</div>
@@ -38,10 +38,10 @@ function TrackersList({ onEdit, onDelete, deletingId }: { onEdit: (t: Tracker) =
                 <button onClick={() => onEdit(t)} className="text-xs underline hover:text-primary">Editar</button>
                 <button
                   onClick={() => onDelete(t.id)}
-                  disabled={deletingId === t.id}
+                  disabled={deletingIds.has(t.id)}
                   className="text-xs text-destructive underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {deletingId === t.id ? (
+                  {deletingIds.has(t.id) ? (
                     <span className="flex items-center gap-1">
                       <Spinner className="h-3 w-3" />
                       Excluindo...
@@ -58,7 +58,7 @@ function TrackersList({ onEdit, onDelete, deletingId }: { onEdit: (t: Tracker) =
 }
 
 export function TrackersPage() {
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, deletingId } =
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, deletingIds } =
     useEntityList<Tracker>(trackersApi.remove, () => { trackersPromise = trackersApi.getAll() })
 
   const handleSubmit = async (data: TrackerFormData) => {
@@ -86,7 +86,7 @@ export function TrackersPage() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <TrackersList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} deletingId={deletingId} />
+          <TrackersList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} deletingIds={deletingIds} />
         </div>
       )}
     </div>
