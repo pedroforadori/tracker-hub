@@ -43,7 +43,7 @@ export function BillingContent({
   asSection,
   readOnly,
 }: {
-  onRefresh: () => void
+  onRefresh?: () => void
   asSection?: boolean
   readOnly?: boolean
 }) {
@@ -53,13 +53,15 @@ export function BillingContent({
   if (!status) {
     return (
       <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
-        Não foi possível carregar as informações de cobrança. Tente novamente.
-        <button
-          onClick={onRefresh}
-          className="ml-2 underline underline-offset-4 hover:opacity-80"
-        >
-          Tentar novamente
-        </button>
+        Não foi possível carregar as informações de cobrança.
+        {!readOnly && (
+          <button
+            onClick={onRefresh}
+            className="ml-2 underline underline-offset-4 hover:opacity-80"
+          >
+            Tentar novamente
+          </button>
+        )}
       </div>
     )
   }
@@ -77,12 +79,18 @@ export function BillingContent({
     ? Math.max(0, Math.ceil((new Date(status.gracePeriodEndsAt).getTime() - Date.now()) / 86_400_000))
     : null
 
+  const sectionClass = asSection
+    ? 'space-y-3 pb-4'
+    : 'rounded-xl border border-border bg-card p-6 space-y-4'
+
+  const SubHeading = asSection ? 'h3' : 'h2'
+
   return (
-    <div className={asSection ? 'space-y-4' : 'mx-auto max-w-lg space-y-6'}>
+    <div className={asSection ? 'divide-y divide-border' : 'mx-auto max-w-lg space-y-6'}>
       {!asSection && <h1 className="text-2xl font-semibold text-foreground">Cobrança</h1>}
 
-      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-        <h2 className="text-sm font-medium text-muted-foreground">Status do plano</h2>
+      <div className={sectionClass}>
+        <SubHeading className="text-sm font-medium text-muted-foreground">Status do plano</SubHeading>
 
         <div className="flex items-center gap-3">
           <span
@@ -114,8 +122,8 @@ export function BillingContent({
         )}
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-        <h2 className="text-sm font-medium text-muted-foreground">Forma de pagamento</h2>
+      <div className={asSection ? 'space-y-3 pt-4' : 'rounded-xl border border-border bg-card p-6 space-y-4'}>
+        <SubHeading className="text-sm font-medium text-muted-foreground">Forma de pagamento</SubHeading>
         <p className="text-sm text-foreground">{cardInfo}</p>
 
         {!readOnly && (
@@ -130,7 +138,7 @@ export function BillingContent({
             <div className="pt-2">
               <CardUpdateForm onSuccess={() => {
                 setShowForm(false)
-                onRefresh()
+                onRefresh?.()
               }} />
             </div>
           )

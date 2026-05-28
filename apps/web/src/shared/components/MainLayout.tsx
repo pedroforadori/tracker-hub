@@ -1,5 +1,4 @@
 import {
-  CreditCard,
   Cpu,
   LayoutDashboard,
   LogOut,

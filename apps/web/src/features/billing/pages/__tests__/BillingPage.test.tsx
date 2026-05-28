@@ -48,13 +48,16 @@ beforeEach(() => {
  * `act()` before returning. Required because React 19's `use()` hook may
  * schedule re-renders outside of the synchronous render cycle.
  */
-async function renderContent(onRefresh = vi.fn()) {
+async function renderContent(
+  onRefresh = vi.fn(),
+  extra: { readOnly?: boolean; asSection?: boolean } = {},
+) {
   let result: ReturnType<typeof render>
   await act(async () => {
     result = render(
       <MemoryRouter>
         <Suspense fallback={<div>Carregando...</div>}>
-          <BillingContent onRefresh={onRefresh} />
+          <BillingContent onRefresh={onRefresh} {...extra} />
         </Suspense>
       </MemoryRouter>,
     )
@@ -149,5 +152,31 @@ describe('BillingPage — BillingContent', () => {
     await renderContent(onRefresh)
     await user.click(screen.getByRole('button', { name: /tentar novamente/i }))
     expect(onRefresh).toHaveBeenCalledOnce()
+  })
+
+  it('readOnly=true → oculta botão "Trocar cartão"', async () => {
+    await renderContent(vi.fn(), { readOnly: true })
+    expect(screen.queryByRole('button', { name: /trocar cartão/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /adicionar cartão/i })).not.toBeInTheDocument()
+  })
+
+  it('readOnly=true → oculta "Tentar novamente" no estado de erro', async () => {
+    mockGetStatus.mockRejectedValue(new Error('fail'))
+    __resetStatusPromise()
+    await renderContent(vi.fn(), { readOnly: true })
+    expect(screen.getByText(/não foi possível carregar/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /tentar novamente/i })).not.toBeInTheDocument()
+  })
+
+  it('asSection=true → não renderiza h1 "Cobrança"', async () => {
+    await renderContent(vi.fn(), { asSection: true })
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
+  })
+
+  it('asSection=true → sub-headings são h3', async () => {
+    await renderContent(vi.fn(), { asSection: true })
+    const h3s = screen.getAllByRole('heading', { level: 3 })
+    expect(h3s.some((el) => /status do plano/i.test(el.textContent ?? ''))).toBe(true)
+    expect(h3s.some((el) => /forma de pagamento/i.test(el.textContent ?? ''))).toBe(true)
   })
 })
