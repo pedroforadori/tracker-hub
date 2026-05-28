@@ -158,6 +158,48 @@ App Router. Atomic Design in `src/components/` (atoms/molecules/organisms). Jest
 
 **Email service (`src/services/email/`):** Interface `IEmailService` with `MockEmailService` (dev/test) and `ResendEmailService` (production). Injected via `AppContext`.
 
+## Conventional Commits
+
+Todos os commits devem seguir o padrão [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <descrição curta em minúsculas>
+
+[corpo opcional]
+
+[rodapé opcional]
+```
+
+**Types obrigatórios:**
+
+| Type       | Quando usar                                              |
+|------------|----------------------------------------------------------|
+| `feat`     | Nova funcionalidade para o usuário                       |
+| `fix`      | Correção de bug                                          |
+| `refactor` | Refatoração sem mudança de comportamento externo         |
+| `style`    | Mudanças visuais/CSS sem lógica                          |
+| `chore`    | Tarefas de manutenção (deps, configs, build)             |
+| `docs`     | Alterações em documentação                               |
+| `test`     | Adição ou correção de testes                             |
+| `perf`     | Melhoria de performance                                  |
+| `ci`       | Mudanças em pipelines de CI/CD                           |
+
+**Scopes sugeridos:** `api`, `web`, `landing`, `billing`, `auth`, `db`, `infra`
+
+**Regras:**
+- Descrição em letras minúsculas, sem ponto final
+- Corpo separado do título por linha em branco
+- Breaking changes: adicionar `!` após o type/scope (`feat(api)!:`) e footer `BREAKING CHANGE:`
+- PRs com múltiplos commits: o título do PR também deve seguir o padrão
+
+**Exemplos:**
+```bash
+feat(web): adicionar seção de cobrança no perfil do usuário
+fix(api): corrigir validação de CNPJ duplicado
+refactor(billing): extrair BillingContent como componente reutilizável
+chore(deps): atualizar prisma para 7.8.0
+```
+
 ## Security — Pre-push Credential Scan
 
 **Before every `git push`, scan staged/committed changes for secrets.** This is mandatory.
