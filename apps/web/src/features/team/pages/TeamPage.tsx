@@ -1,4 +1,5 @@
 import { use } from 'react'
+import { Spinner } from '@/components/atoms/Spinner'
 import { useAuthStore } from '@/shared/store/authStore'
 import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { TeamMember } from '@/shared/types/api'
@@ -9,7 +10,7 @@ const MAX_SECONDARY_USERS = 3
 
 let teamPromise = teamApi.getAll()
 
-function TeamList({ onEdit, onDelete }: { onEdit: (m: TeamMember) => void; onDelete: (id: string) => void }) {
+function TeamList({ onEdit, onDelete, deletingId }: { onEdit: (m: TeamMember) => void; onDelete: (id: string) => void; deletingId: string | null }) {
   const members = use(teamPromise)
   const { user: currentUser } = useAuthStore()
 
@@ -60,7 +61,18 @@ function TeamList({ onEdit, onDelete }: { onEdit: (m: TeamMember) => void; onDel
                   {m.id !== currentUser?.id && m.role !== 'ADMIN' && (
                     <div className="flex gap-2">
                       <button onClick={() => onEdit(m)} className="text-xs underline hover:text-primary">Editar</button>
-                      <button onClick={() => onDelete(m.id)} className="text-xs text-destructive underline hover:opacity-80">Remover</button>
+                      <button
+                        onClick={() => onDelete(m.id)}
+                        disabled={deletingId === m.id}
+                        className="text-xs text-destructive underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingId === m.id ? (
+                          <span className="flex items-center gap-1">
+                            <Spinner className="h-3 w-3" />
+                            Removendo...
+                          </span>
+                        ) : 'Remover'}
+                      </button>
                     </div>
                   )}
                 </td>
@@ -74,7 +86,7 @@ function TeamList({ onEdit, onDelete }: { onEdit: (m: TeamMember) => void; onDel
 }
 
 export function TeamPage() {
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, invalidate } =
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, handleDelete, invalidate, deletingId } =
     useEntityList<TeamMember>(teamApi.remove, () => { teamPromise = teamApi.getAll() })
 
   const handleSubmit = async (data: TeamFormData) => {
@@ -115,12 +127,8 @@ export function TeamPage() {
       ) : (
         <TeamList
           onEdit={handleEdit}
-          onDelete={async (id) => {
-            if (window.confirm('Confirma remoção do membro?')) {
-              await teamApi.remove(id)
-              invalidate()
-            }
-          }}
+          onDelete={(id) => handleDelete(id, 'Confirma remoção do membro?')}
+          deletingId={deletingId}
         />
       )}
     </div>

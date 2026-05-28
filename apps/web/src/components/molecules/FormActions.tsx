@@ -1,3 +1,5 @@
+import { Spinner } from '@/components/atoms/Spinner'
+
 interface FormActionsProps {
   onCancel: () => void
   isSubmitting?: boolean
@@ -22,7 +24,12 @@ export function FormActions({ onCancel, isSubmitting, isEditing, submitLabel }: 
         disabled={isSubmitting}
         className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
-        {isSubmitting ? 'Salvando...' : label}
+        {isSubmitting ? (
+          <span className="flex items-center justify-center gap-2">
+            <Spinner />
+            Salvando...
+          </span>
+        ) : label}
       </button>
     </div>
   )

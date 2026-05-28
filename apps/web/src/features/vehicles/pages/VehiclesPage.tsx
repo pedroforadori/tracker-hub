@@ -1,11 +1,12 @@
 import { use } from 'react'
+import { Spinner } from '@/components/atoms/Spinner'
 import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Vehicle } from '@/shared/types/api'
 import { getVehiclesPromise, invalidateVehicles } from '@/shared/store/entityPromises'
 import { vehiclesApi } from '../api/vehicles.api'
 import { VehicleForm, type VehicleFormData } from '../components/VehicleForm'
 
-function VehiclesList({ onEdit, onDelete }: { onEdit: (v: Vehicle) => void; onDelete: (id: string) => void }) {
+function VehiclesList({ onEdit, onDelete, deletingId }: { onEdit: (v: Vehicle) => void; onDelete: (id: string) => void; deletingId: string | null }) {
   const vehicles = use(getVehiclesPromise())
 
   if (!vehicles.length) {
@@ -33,7 +34,18 @@ function VehiclesList({ onEdit, onDelete }: { onEdit: (v: Vehicle) => void; onDe
             <td className="py-3">
               <div className="flex gap-2">
                 <button onClick={() => onEdit(v)} className="text-xs underline hover:text-primary">Editar</button>
-                <button onClick={() => onDelete(v.id)} className="text-xs text-destructive underline hover:opacity-80">Excluir</button>
+                <button
+                  onClick={() => onDelete(v.id)}
+                  disabled={deletingId === v.id}
+                  className="text-xs text-destructive underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deletingId === v.id ? (
+                    <span className="flex items-center gap-1">
+                      <Spinner className="h-3 w-3" />
+                      Excluindo...
+                    </span>
+                  ) : 'Excluir'}
+                </button>
               </div>
             </td>
           </tr>
@@ -44,7 +56,7 @@ function VehiclesList({ onEdit, onDelete }: { onEdit: (v: Vehicle) => void; onDe
 }
 
 export function VehiclesPage() {
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, deletingId } =
     useEntityList<Vehicle>(vehiclesApi.remove, () => { invalidateVehicles() })
 
   const handleSubmit = async (data: VehicleFormData) => {
@@ -72,7 +84,7 @@ export function VehiclesPage() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <VehiclesList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} />
+          <VehiclesList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} deletingId={deletingId} />
         </div>
       )}
     </div>

@@ -15,6 +15,7 @@ describe('useEntityList', () => {
     expect(result.current.showForm).toBe(false)
     expect(result.current.editing).toBeNull()
     expect(result.current.refresh).toBe(0)
+    expect(result.current.deletingId).toBeNull()
   })
 
   it('handleEdit() define editing e abre o form', () => {
@@ -55,6 +56,16 @@ describe('useEntityList', () => {
 
     expect(removeFn).toHaveBeenCalledWith('item-1')
     expect(result.current.refresh).toBe(1)
+  })
+
+  it('deletingId volta a null após o delete completar', async () => {
+    vi.mocked(window.confirm).mockReturnValueOnce(true)
+    const { result, removeFn } = makeHook()
+
+    await act(() => result.current.handleDelete('item-1'))
+
+    expect(removeFn).toHaveBeenCalledWith('item-1')
+    expect(result.current.deletingId).toBeNull()
   })
 
   it('handleDelete com confirm=false NÃO chama removeFn', async () => {
