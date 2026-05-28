@@ -38,7 +38,15 @@ export function __resetStatusPromise(): void {
  * Inner content component — exported so tests can render it directly inside
  * their own <Suspense> boundary, mirroring the CustomersPage/CustomersList pattern.
  */
-export function BillingContent({ onRefresh }: { onRefresh: () => void }) {
+export function BillingContent({
+  onRefresh,
+  asSection,
+  readOnly,
+}: {
+  onRefresh: () => void
+  asSection?: boolean
+  readOnly?: boolean
+}) {
   const status = use(statusPromise)
   const [showForm, setShowForm] = useState(false)
 
@@ -70,8 +78,8 @@ export function BillingContent({ onRefresh }: { onRefresh: () => void }) {
     : null
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
-      <h1 className="text-2xl font-semibold text-foreground">Cobrança</h1>
+    <div className={asSection ? 'space-y-4' : 'mx-auto max-w-lg space-y-6'}>
+      {!asSection && <h1 className="text-2xl font-semibold text-foreground">Cobrança</h1>}
 
       <div className="rounded-xl border border-border bg-card p-6 space-y-4">
         <h2 className="text-sm font-medium text-muted-foreground">Status do plano</h2>
@@ -110,20 +118,22 @@ export function BillingContent({ onRefresh }: { onRefresh: () => void }) {
         <h2 className="text-sm font-medium text-muted-foreground">Forma de pagamento</h2>
         <p className="text-sm text-foreground">{cardInfo}</p>
 
-        {!showForm ? (
-          <button
-            onClick={() => setShowForm(true)}
-            className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-          >
-            {status.lastFour ? 'Trocar cartão' : 'Adicionar cartão'}
-          </button>
-        ) : (
-          <div className="pt-2">
-            <CardUpdateForm onSuccess={() => {
-              setShowForm(false)
-              onRefresh()
-            }} />
-          </div>
+        {!readOnly && (
+          !showForm ? (
+            <button
+              onClick={() => setShowForm(true)}
+              className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              {status.lastFour ? 'Trocar cartão' : 'Adicionar cartão'}
+            </button>
+          ) : (
+            <div className="pt-2">
+              <CardUpdateForm onSuccess={() => {
+                setShowForm(false)
+                onRefresh()
+              }} />
+            </div>
+          )
         )}
       </div>
     </div>

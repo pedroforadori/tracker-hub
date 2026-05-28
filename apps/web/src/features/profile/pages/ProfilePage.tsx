@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff } from 'lucide-react'
 import { FormField } from '@/components/molecules/FormField'
 import { FormActions } from '@/components/molecules/FormActions'
+import { FormSkeleton } from '@/shared/components/LoadingSkeleton'
 import { INPUT_BASE } from '@/shared/constants/styles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/shared/store/authStore'
+import { BillingContent, __resetStatusPromise } from '@/features/billing/pages/BillingPage'
 import { profileApi } from '../api/profile.api'
 
 const profileSchema = z.object({
@@ -29,6 +31,12 @@ export function ProfilePage() {
   const [serverError, setServerError] = useState('')
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [billingRefresh, setBillingRefresh] = useState(0)
+
+  const handleBillingRefresh = () => {
+    __resetStatusPromise()
+    setBillingRefresh((r) => r + 1)
+  }
 
   const {
     register,
@@ -146,6 +154,22 @@ export function ProfilePage() {
           />
         </form>
       </div>
+
+      {user?.role === 'ADMIN' && (
+        <div className="relative rounded-lg border border-border p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <h2 className="text-base font-medium">Cobrança</h2>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+              Em breve
+            </span>
+          </div>
+          <div className="pointer-events-none opacity-50">
+            <Suspense fallback={<FormSkeleton />}>
+              <BillingContent key={billingRefresh} onRefresh={handleBillingRefresh} asSection readOnly />
+            </Suspense>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

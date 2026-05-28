@@ -59,16 +59,10 @@ export function MainLayout() {
           ))}
 
           {user?.role === 'ADMIN' && (
-            <>
-              <NavLink to="/team" className={navLinkClass}>
-                <Users size={16} />
-                Equipe
-              </NavLink>
-              <NavLink to="/billing" className={navLinkClass}>
-                <CreditCard size={16} />
-                Cobrança
-              </NavLink>
-            </>
+            <NavLink to="/team" className={navLinkClass}>
+              <Users size={16} />
+              Equipe
+            </NavLink>
           )}
         </nav>
 
@@ -89,6 +83,22 @@ export function MainLayout() {
               {user?.role}
             </span>
           </NavLink>
+          {/* {user?.role === 'ADMIN' && (
+            <NavLink
+              to="/billing"
+              className={({ isActive }) =>
+                cn(
+                  'mb-1 flex items-center gap-2 rounded-md px-3 py-1 text-xs text-muted-foreground transition-colors',
+                  isActive
+                    ? 'bg-accent text-accent-foreground'
+                    : 'hover:bg-accent hover:text-accent-foreground',
+                )
+              }
+            >
+              <CreditCard size={14} />
+              Cobrança
+            </NavLink>
+          )} */}
           <button
             onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
