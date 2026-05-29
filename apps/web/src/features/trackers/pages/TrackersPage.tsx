@@ -1,4 +1,5 @@
 import { use } from 'react'
+import { Spinner } from '@/components/atoms/Spinner'
 import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Tracker } from '@/shared/types/api'
 import { trackersApi } from '../api/trackers.api'
@@ -6,7 +7,7 @@ import { TrackerForm, type TrackerFormData } from '../components/TrackerForm'
 
 let trackersPromise = trackersApi.getAll()
 
-function TrackersList({ onEdit, onDelete }: { onEdit: (t: Tracker) => void; onDelete: (id: string) => void }) {
+function TrackersList({ onEdit, onDelete, deletingIds }: { onEdit: (t: Tracker) => void; onDelete: (id: string) => void; deletingIds: Set<string> }) {
   const trackers = use(trackersPromise)
 
   if (!trackers.length) return <div className="py-12 text-center text-sm text-muted-foreground">Nenhum rastreador cadastrado.</div>
@@ -35,7 +36,18 @@ function TrackersList({ onEdit, onDelete }: { onEdit: (t: Tracker) => void; onDe
             <td className="py-3">
               <div className="flex gap-2">
                 <button onClick={() => onEdit(t)} className="text-xs underline hover:text-primary">Editar</button>
-                <button onClick={() => onDelete(t.id)} className="text-xs text-destructive underline hover:opacity-80">Excluir</button>
+                <button
+                  onClick={() => onDelete(t.id)}
+                  disabled={deletingIds.has(t.id)}
+                  className="text-xs text-destructive underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deletingIds.has(t.id) ? (
+                    <span className="flex items-center gap-1">
+                      <Spinner className="h-3 w-3" />
+                      Excluindo...
+                    </span>
+                  ) : 'Excluir'}
+                </button>
               </div>
             </td>
           </tr>
@@ -46,7 +58,7 @@ function TrackersList({ onEdit, onDelete }: { onEdit: (t: Tracker) => void; onDe
 }
 
 export function TrackersPage() {
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete } =
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, deletingIds } =
     useEntityList<Tracker>(trackersApi.remove, () => { trackersPromise = trackersApi.getAll() })
 
   const handleSubmit = async (data: TrackerFormData) => {
@@ -74,7 +86,7 @@ export function TrackersPage() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <TrackersList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} />
+          <TrackersList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} deletingIds={deletingIds} />
         </div>
       )}
     </div>

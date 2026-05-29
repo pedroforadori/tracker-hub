@@ -3,6 +3,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useSearchParams } from 'react-router-dom'
+import { Spinner } from '@/components/atoms/Spinner'
 import { z } from 'zod'
 import { cn } from '@/lib/utils'
 import { INPUT_BASE } from '@/shared/constants/styles'
@@ -197,7 +198,12 @@ export function ResetPasswordPage() {
             disabled={isSubmitting}
             className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
-            {isSubmitting ? 'Redefinindo...' : 'Redefinir senha'}
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <Spinner />
+                Redefinindo...
+              </span>
+            ) : 'Redefinir senha'}
           </button>
         </form>
       </div>

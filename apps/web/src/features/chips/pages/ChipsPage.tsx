@@ -1,4 +1,5 @@
 import { use, useState } from 'react'
+import { Spinner } from '@/components/atoms/Spinner'
 import { useEntityList } from '@/shared/hooks/useEntityList'
 import type { Chip } from '@/shared/types/api'
 import { chipsApi } from '../api/chips.api'
@@ -6,7 +7,7 @@ import { ChipForm, type ChipFormData } from '../components/ChipForm'
 
 let chipsPromise = chipsApi.getAll()
 
-function ChipsList({ onEdit, onDelete }: { onEdit: (c: Chip) => void; onDelete: (id: string) => void }) {
+function ChipsList({ onEdit, onDelete, deletingIds }: { onEdit: (c: Chip) => void; onDelete: (id: string) => void; deletingIds: Set<string> }) {
   const chips = use(chipsPromise)
 
   if (!chips.length) return <div className="py-12 text-center text-sm text-muted-foreground">Nenhum chip cadastrado.</div>
@@ -32,7 +33,18 @@ function ChipsList({ onEdit, onDelete }: { onEdit: (c: Chip) => void; onDelete: 
             <td className="py-3">
               <div className="flex gap-2">
                 <button onClick={() => onEdit(c)} className="text-xs underline hover:text-primary">Editar</button>
-                <button onClick={() => onDelete(c.id)} className="text-xs text-destructive underline hover:opacity-80">Excluir</button>
+                <button
+                  onClick={() => onDelete(c.id)}
+                  disabled={deletingIds.has(c.id)}
+                  className="text-xs text-destructive underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deletingIds.has(c.id) ? (
+                    <span className="flex items-center gap-1">
+                      <Spinner className="h-3 w-3" />
+                      Excluindo...
+                    </span>
+                  ) : 'Excluir'}
+                </button>
               </div>
             </td>
           </tr>
@@ -45,7 +57,7 @@ function ChipsList({ onEdit, onDelete }: { onEdit: (c: Chip) => void; onDelete: 
 export function ChipsPage() {
   const [serverError, setServerError] = useState('')
 
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel: baseHandleCancel, afterSubmit, handleDelete } =
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel: baseHandleCancel, afterSubmit, handleDelete, deletingIds } =
     useEntityList<Chip>(chipsApi.remove, () => { chipsPromise = chipsApi.getAll() })
 
   const handleCancel = () => {
@@ -89,7 +101,7 @@ export function ChipsPage() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <ChipsList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} />
+          <ChipsList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} deletingIds={deletingIds} />
         </div>
       )}
     </div>
