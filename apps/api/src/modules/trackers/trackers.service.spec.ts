@@ -10,6 +10,8 @@ const mockRepo = {
   create: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
+  findByDateRange: jest.fn(),
+  findVehicleByPlate: jest.fn(),
 };
 
 const currentUser = { id: 'admin-1', email: 'admin@test.com', role: UserRole.ADMIN, tenantId: 'tenant-1' };
@@ -98,6 +100,56 @@ describe('TrackersService', () => {
       mockRepo.findOne.mockResolvedValue(null);
       await expect(service.remove('ghost', currentUser)).rejects.toThrow(NotFoundException);
       expect(mockRepo.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getImportTemplate()', () => {
+    it('retorna buffer xlsx com filename rastreadores.xlsx', () => {
+      const result = service.getImportTemplate('xlsx');
+      expect(result.filename).toBe('rastreadores.xlsx');
+      expect(result.buffer.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('exportByDateRange()', () => {
+    it('chama repo.findByDateRange com tenantId correto', async () => {
+      mockRepo.findByDateRange.mockResolvedValue([]);
+      await service.exportByDateRange('2025-01-01', '2025-12-31', 'xlsx', currentUser);
+      expect(mockRepo.findByDateRange).toHaveBeenCalledWith('tenant-1', expect.any(Date), expect.any(Date));
+    });
+  });
+
+  describe('importFromFile()', () => {
+    const makeFile = (csv: string) => ({ buffer: Buffer.from(csv, 'utf8'), originalname: 'data.csv' });
+    const vehicleEntity = { id: 'veh-1', plate: 'ABC1D23' };
+
+    it('importa linha válida após encontrar veículo pela placa', async () => {
+      mockRepo.findVehicleByPlate.mockResolvedValue(vehicleEntity);
+      mockRepo.create.mockResolvedValue(trackerEntity);
+      const result = await service.importFromFile(
+        makeFile('IMEI,Marca,Modelo,Placa do Veículo\n123456789012345,Concox,GT06N,ABC1D23'),
+        currentUser,
+      );
+      expect(result.imported).toBe(1);
+      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ imei: '123456789012345', vehicleId: 'veh-1' }), 'tenant-1');
+    });
+
+    it('registra erro quando veículo não é encontrado pela placa', async () => {
+      mockRepo.findVehicleByPlate.mockResolvedValue(null);
+      const result = await service.importFromFile(
+        makeFile('IMEI,Marca,Modelo,Placa do Veículo\n123456789012345,Concox,GT06N,XYZ1234'),
+        currentUser,
+      );
+      expect(result.imported).toBe(0);
+      expect(result.errors[0].message).toContain('não encontrado');
+    });
+
+    it('registra erro quando IMEI não tem 15 dígitos', async () => {
+      const result = await service.importFromFile(
+        makeFile('IMEI,Marca,Modelo,Placa do Veículo\n12345,Concox,GT06N,ABC1D23'),
+        currentUser,
+      );
+      expect(result.errors[0].message).toContain('IMEI');
     });
   });
 });

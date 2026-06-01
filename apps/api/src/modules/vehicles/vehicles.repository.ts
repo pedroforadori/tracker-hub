@@ -32,4 +32,16 @@ export class VehiclesRepository {
   remove(id: string, tenantId: string) {
     return this.prisma.vehicle.delete({ where: { id, tenantId } });
   }
+
+  findByDateRange(tenantId: string, from: Date, to: Date) {
+    return this.prisma.vehicle.findMany({
+      where: { tenantId, createdAt: { gte: from, lte: to } },
+      include: { customer: { select: { name: true, cnpj: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  findCustomerByCnpj(cnpj: string, tenantId: string) {
+    return this.prisma.customer.findFirst({ where: { cnpj, tenantId } });
+  }
 }

@@ -11,6 +11,8 @@ const mockRepo = {
   create: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
+  findByDateRange: jest.fn(),
+  findTrackerByImei: jest.fn(),
 };
 
 const currentUser = { id: 'admin-1', email: 'admin@test.com', role: UserRole.ADMIN, tenantId: 'tenant-1' };
@@ -125,6 +127,68 @@ describe('ChipsService', () => {
       mockRepo.findOne.mockResolvedValue(null);
       await expect(service.remove('ghost', currentUser)).rejects.toThrow(NotFoundException);
       expect(mockRepo.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getImportTemplate()', () => {
+    it('retorna buffer xlsx com filename chips.xlsx', () => {
+      const result = service.getImportTemplate('xlsx');
+      expect(result.filename).toBe('chips.xlsx');
+      expect(result.buffer.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('exportByDateRange()', () => {
+    it('chama repo.findByDateRange com tenantId correto', async () => {
+      mockRepo.findByDateRange.mockResolvedValue([]);
+      await service.exportByDateRange('2025-01-01', '2025-12-31', 'xlsx', currentUser);
+      expect(mockRepo.findByDateRange).toHaveBeenCalledWith('tenant-1', expect.any(Date), expect.any(Date));
+    });
+  });
+
+  describe('importFromFile()', () => {
+    const makeFile = (csv: string) => ({ buffer: Buffer.from(csv, 'utf8'), originalname: 'data.csv' });
+    const trackerEntity = { id: 'trk-1', imei: '123456789012345' };
+
+    it('importa linha válida após encontrar rastreador pelo IMEI', async () => {
+      mockRepo.findTrackerByImei.mockResolvedValue(trackerEntity);
+      mockRepo.findByTrackerId.mockResolvedValue(null);
+      mockRepo.create.mockResolvedValue(chipEntity);
+      const result = await service.importFromFile(
+        makeFile('ICCID,Número de Telefone,Operadora,IMEI do Rastreador\n"89550534000000000001",11999990001,Vivo,123456789012345'),
+        currentUser,
+      );
+      expect(result.imported).toBe(1);
+      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ iccid: '89550534000000000001', trackerId: 'trk-1' }), 'tenant-1');
+    });
+
+    it('registra erro quando rastreador não é encontrado pelo IMEI', async () => {
+      mockRepo.findTrackerByImei.mockResolvedValue(null);
+      const result = await service.importFromFile(
+        makeFile('ICCID,Número de Telefone,Operadora,IMEI do Rastreador\n"89550534000000000001",11999990001,Vivo,123456789012345'),
+        currentUser,
+      );
+      expect(result.imported).toBe(0);
+      expect(result.errors[0].message).toContain('não encontrado');
+    });
+
+    it('registra erro quando rastreador já possui chip vinculado', async () => {
+      mockRepo.findTrackerByImei.mockResolvedValue(trackerEntity);
+      mockRepo.findByTrackerId.mockResolvedValue(chipEntity);
+      const result = await service.importFromFile(
+        makeFile('ICCID,Número de Telefone,Operadora,IMEI do Rastreador\n"89550534000000000001",11999990001,Vivo,123456789012345'),
+        currentUser,
+      );
+      expect(result.imported).toBe(0);
+      expect(result.errors[0].message).toContain('já possui chip');
+    });
+
+    it('registra erro quando ICCID está ausente', async () => {
+      const result = await service.importFromFile(
+        makeFile('ICCID,Número de Telefone,Operadora,IMEI do Rastreador\n,11999990001,Vivo,123456789012345'),
+        currentUser,
+      );
+      expect(result.errors[0].message).toContain('ICCID');
     });
   });
 });

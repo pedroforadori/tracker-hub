@@ -32,4 +32,16 @@ export class TrackersRepository {
   remove(id: string, tenantId: string) {
     return this.prisma.tracker.delete({ where: { id, tenantId } });
   }
+
+  findByDateRange(tenantId: string, from: Date, to: Date) {
+    return this.prisma.tracker.findMany({
+      where: { tenantId, createdAt: { gte: from, lte: to } },
+      include: { vehicle: { select: { plate: true } }, chip: { select: { iccid: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  findVehicleByPlate(plate: string, tenantId: string) {
+    return this.prisma.vehicle.findFirst({ where: { plate, tenantId } });
+  }
 }

@@ -33,4 +33,16 @@ export class ChipsRepository {
   remove(id: string, tenantId: string) {
     return this.prisma.chip.delete({ where: { id, tenantId } });
   }
+
+  findByDateRange(tenantId: string, from: Date, to: Date) {
+    return this.prisma.chip.findMany({
+      where: { tenantId, createdAt: { gte: from, lte: to } },
+      include: { tracker: { select: { imei: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  findTrackerByImei(imei: string, tenantId: string) {
+    return this.prisma.tracker.findFirst({ where: { imei, tenantId } });
+  }
 }

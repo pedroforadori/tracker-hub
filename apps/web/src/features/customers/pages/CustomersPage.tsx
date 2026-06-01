@@ -1,7 +1,12 @@
 'use client'
 import { use, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { Switch } from '@/components/atoms/Switch'
+import { ExportModal } from '@/components/molecules/ExportModal'
+import { ImportExportBar } from '@/components/molecules/ImportExportBar'
+import { ImportResultAlert } from '@/components/molecules/ImportResultAlert'
 import { useEntityList } from '@/shared/hooks/useEntityList'
+import { useImportExport } from '@/shared/hooks/useImportExport'
 import type { Customer, CustomerStatus } from '@/shared/types/api'
 import { getCustomersPromise, invalidateCustomers, patchCustomerStatus } from '@/shared/store/entityPromises'
 import { customersApi } from '../api/customers.api'
@@ -92,12 +97,19 @@ function CustomersList({
 export function CustomersPage() {
   const [statusOverrides, setStatusOverrides] = useState<Record<string, CustomerStatus>>({})
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
+  const [showExportModal, setShowExportModal] = useState(false)
 
-  const { showForm, setShowForm, editing, setEditing, handleEdit, handleCancel, afterSubmit, handleDelete } =
+  const { showForm, setShowForm, editing, setEditing, handleEdit, handleCancel, afterSubmit, handleDelete, invalidate } =
     useEntityList<Customer>(customersApi.remove, () => {
       invalidateCustomers()
       setStatusOverrides({})
     })
+
+  const {
+    importing, downloadingTemplate, exporting,
+    importResult, importError, templateError, exportError,
+    handleImport, handleTemplateDownload, handleExport,
+  } = useImportExport(customersApi, 'clientes', invalidate)
 
   const handleSubmit = async (data: CustomerFormData) => {
     if (editing) await customersApi.update(editing.id, data)
@@ -122,17 +134,29 @@ export function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold">Clientes</h1>
-        {!showForm && (
-          <button
-            onClick={() => { setEditing(null); setShowForm(true) }}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-          >
-            + Novo Cliente
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <ImportExportBar
+            onImport={handleImport}
+            onTemplateDownload={handleTemplateDownload}
+            onExportOpen={() => setShowExportModal(true)}
+            importing={importing}
+            downloadingTemplate={downloadingTemplate}
+          />
+          {!showForm && (
+            <button
+              onClick={() => { setEditing(null); setShowForm(true) }}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Novo Cliente
+            </button>
+          )}
+        </div>
       </div>
+
+      <ImportResultAlert result={importResult} error={importError || templateError} />
 
       {showForm ? (
         <div className="rounded-lg border border-border p-6">
@@ -152,6 +176,18 @@ export function CustomersPage() {
           onEdit={handleEdit}
           onDelete={(id) => handleDelete(id, 'Confirma exclusão do cliente? Todos os veículos vinculados serão removidos.')}
           onStatusChange={handleStatusChange}
+        />
+      )}
+
+      {showExportModal && (
+        <ExportModal
+          onClose={() => setShowExportModal(false)}
+          onExport={async (from, to, format) => {
+            const success = await handleExport(from, to, format)
+            if (success) setShowExportModal(false)
+          }}
+          exporting={exporting}
+          exportError={exportError}
         />
       )}
     </div>

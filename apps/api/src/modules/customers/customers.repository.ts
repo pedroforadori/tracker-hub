@@ -26,4 +26,11 @@ export class CustomersRepository {
   remove(id: string, tenantId: string) {
     return this.prisma.customer.delete({ where: { id, tenantId } });
   }
+
+  findByDateRange(tenantId: string, from: Date, to: Date) {
+    return this.prisma.customer.findMany({
+      where: { tenantId, createdAt: { gte: from, lte: to } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
 }

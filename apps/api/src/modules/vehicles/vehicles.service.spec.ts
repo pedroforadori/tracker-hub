@@ -10,6 +10,8 @@ const mockRepo = {
   create: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
+  findByDateRange: jest.fn(),
+  findCustomerByCnpj: jest.fn(),
 };
 
 const currentUser = { id: 'admin-1', email: 'admin@test.com', role: UserRole.ADMIN, tenantId: 'tenant-1' };
@@ -98,6 +100,76 @@ describe('VehiclesService', () => {
       mockRepo.findOne.mockResolvedValue(null);
       await expect(service.remove('ghost', currentUser)).rejects.toThrow(NotFoundException);
       expect(mockRepo.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getImportTemplate()', () => {
+    it('retorna buffer xlsx com filename veiculos.xlsx', () => {
+      const result = service.getImportTemplate('xlsx');
+      expect(result.filename).toBe('veiculos.xlsx');
+      expect(result.buffer.length).toBeGreaterThan(0);
+    });
+
+    it('retorna buffer csv com filename veiculos.csv', () => {
+      const result = service.getImportTemplate('csv');
+      expect(result.filename).toBe('veiculos.csv');
+    });
+  });
+
+  describe('exportByDateRange()', () => {
+    it('chama repo.findByDateRange com tenantId e datas corretas', async () => {
+      mockRepo.findByDateRange.mockResolvedValue([]);
+      await service.exportByDateRange('2025-06-01', '2025-06-30', 'xlsx', currentUser);
+      expect(mockRepo.findByDateRange).toHaveBeenCalledWith('tenant-1', expect.any(Date), expect.any(Date));
+    });
+
+    it('retorna buffer mesmo com lista vazia', async () => {
+      mockRepo.findByDateRange.mockResolvedValue([]);
+      const result = await service.exportByDateRange('2025-01-01', '2025-12-31', 'csv', currentUser);
+      expect(result.buffer.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('importFromFile()', () => {
+    const makeFile = (csv: string) => ({ buffer: Buffer.from(csv, 'utf8'), originalname: 'data.csv' });
+    const customerEntity = { id: 'cust-1', name: 'Cliente A', cnpj: '12345678000199', tenantId: 'tenant-1' };
+
+    it('importa linha válida após encontrar cliente por CNPJ', async () => {
+      mockRepo.findCustomerByCnpj.mockResolvedValue(customerEntity);
+      mockRepo.create.mockResolvedValue(vehicleEntity);
+      const result = await service.importFromFile(
+        makeFile('Placa,Marca,Modelo,Ano,CNPJ do Cliente\nABC1D23,Toyota,Corolla,2022,12345678000199'),
+        currentUser,
+      );
+      expect(result.imported).toBe(1);
+      expect(result.errors).toHaveLength(0);
+      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ plate: 'ABC1D23', customerId: 'cust-1' }), 'tenant-1');
+    });
+
+    it('registra erro quando cliente não é encontrado pelo CNPJ', async () => {
+      mockRepo.findCustomerByCnpj.mockResolvedValue(null);
+      const result = await service.importFromFile(
+        makeFile('Placa,Marca,Modelo,Ano,CNPJ do Cliente\nXYZ5E67,Ford,Ka,2020,12345678000199'),
+        currentUser,
+      );
+      expect(result.imported).toBe(0);
+      expect(result.errors[0].message).toContain('não encontrado');
+    });
+
+    it('registra erro quando Placa está ausente', async () => {
+      const result = await service.importFromFile(
+        makeFile('Placa,Marca,Modelo,Ano,CNPJ do Cliente\n,Ford,Ka,2020,12345678000199'),
+        currentUser,
+      );
+      expect(result.errors[0].message).toContain('Placa');
+    });
+
+    it('registra erro quando Ano é inválido', async () => {
+      const result = await service.importFromFile(
+        makeFile('Placa,Marca,Modelo,Ano,CNPJ do Cliente\nXYZ5E67,Ford,Ka,1800,12345678000199'),
+        currentUser,
+      );
+      expect(result.errors[0].message).toContain('Ano');
     });
   });
 });

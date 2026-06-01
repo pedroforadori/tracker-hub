@@ -1,5 +1,10 @@
 import { use, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { ExportModal } from '@/components/molecules/ExportModal'
+import { ImportExportBar } from '@/components/molecules/ImportExportBar'
+import { ImportResultAlert } from '@/components/molecules/ImportResultAlert'
 import { useEntityList } from '@/shared/hooks/useEntityList'
+import { useImportExport } from '@/shared/hooks/useImportExport'
 import type { Chip } from '@/shared/types/api'
 import { chipsApi } from '../api/chips.api'
 import { ChipForm, type ChipFormData } from '../components/ChipForm'
@@ -44,14 +49,21 @@ function ChipsList({ onEdit, onDelete }: { onEdit: (c: Chip) => void; onDelete: 
 
 export function ChipsPage() {
   const [serverError, setServerError] = useState('')
+  const [showExportModal, setShowExportModal] = useState(false)
 
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel: baseHandleCancel, afterSubmit, handleDelete } =
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel: baseHandleCancel, afterSubmit, handleDelete, invalidate } =
     useEntityList<Chip>(chipsApi.remove, () => { chipsPromise = chipsApi.getAll() })
 
   const handleCancel = () => {
     setServerError('')
     baseHandleCancel()
   }
+
+  const {
+    importing, downloadingTemplate, exporting,
+    importResult, importError, templateError, exportError,
+    handleImport, handleTemplateDownload, handleExport,
+  } = useImportExport(chipsApi, 'chips', invalidate)
 
   const handleSubmit = async (data: ChipFormData) => {
     setServerError('')
@@ -67,15 +79,27 @@ export function ChipsPage() {
 
   return (
     <div className="space-y-6" key={refresh}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold">Chips</h1>
-        {!showForm && (
-          <button onClick={() => { setEditing(null); setShowForm(true) }}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-            + Novo Chip
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <ImportExportBar
+            onImport={handleImport}
+            onTemplateDownload={handleTemplateDownload}
+            onExportOpen={() => setShowExportModal(true)}
+            importing={importing}
+            downloadingTemplate={downloadingTemplate}
+          />
+          {!showForm && (
+            <button onClick={() => { setEditing(null); setShowForm(true) }}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90">
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Novo Chip
+            </button>
+          )}
+        </div>
       </div>
+
+      <ImportResultAlert result={importResult} error={importError || templateError} />
 
       {showForm ? (
         <div className="rounded-lg border border-border p-6">
@@ -91,6 +115,18 @@ export function ChipsPage() {
         <div className="overflow-x-auto">
           <ChipsList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} />
         </div>
+      )}
+
+      {showExportModal && (
+        <ExportModal
+          onClose={() => setShowExportModal(false)}
+          onExport={async (from, to, format) => {
+            const success = await handleExport(from, to, format)
+            if (success) setShowExportModal(false)
+          }}
+          exporting={exporting}
+          exportError={exportError}
+        />
       )}
     </div>
   )
