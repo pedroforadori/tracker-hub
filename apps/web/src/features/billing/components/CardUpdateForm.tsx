@@ -1,6 +1,7 @@
 import { CardElement, Elements, useElements, useStripe } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 import { useEffect, useState } from 'react'
+import { Spinner } from '@/components/atoms/Spinner'
 import { useBillingStore } from '@/shared/store/billingStore'
 import { billingApi } from '../api/billing.api'
 
@@ -90,7 +91,12 @@ function CardForm({ onSuccess }: CardFormProps) {
         disabled={loading || !stripe}
         className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
-        {loading ? 'Processando...' : 'Confirmar novo cartão'}
+        {loading ? (
+          <span className="flex items-center justify-center gap-2">
+            <Spinner />
+            Processando...
+          </span>
+        ) : 'Confirmar novo cartão'}
       </button>
     </form>
   )

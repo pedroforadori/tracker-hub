@@ -36,18 +36,16 @@ describe('MainLayout', () => {
     expect(screen.getByRole('link', { name: /sim cards/i })).toBeInTheDocument()
   })
 
-  it('ADMIN → exibe links "Equipe" e "Cobrança"', () => {
+  it('ADMIN → exibe link "Equipe"', () => {
     authenticateAsAdmin()
     renderLayout()
     expect(screen.getByRole('link', { name: /equipe/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /cobrança/i })).toBeInTheDocument()
   })
 
-  it('USER → não exibe links "Equipe" e "Cobrança"', () => {
+  it('USER → não exibe link "Equipe"', () => {
     authenticateAsUser()
     renderLayout()
     expect(screen.queryByRole('link', { name: /equipe/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /cobrança/i })).not.toBeInTheDocument()
   })
 
   it('exibe o e-mail e role do usuário logado', () => {

@@ -1,6 +1,7 @@
 'use client'
 import { use, useState } from 'react'
 import { Plus } from 'lucide-react'
+import { Spinner } from '@/components/atoms/Spinner'
 import { Switch } from '@/components/atoms/Switch'
 import { ExportModal } from '@/components/molecules/ExportModal'
 import { ImportExportBar } from '@/components/molecules/ImportExportBar'
@@ -15,12 +16,14 @@ import { CustomerForm, type CustomerFormData } from '../components/CustomerForm'
 function CustomersList({
   statusOverrides,
   pendingIds,
+  deletingIds,
   onEdit,
   onDelete,
   onStatusChange,
 }: {
   statusOverrides: Record<string, CustomerStatus>
   pendingIds: Set<string>
+  deletingIds: Set<string>
   onEdit: (c: Customer) => void
   onDelete: (id: string) => void
   onStatusChange: (id: string, status: CustomerStatus) => void
@@ -80,8 +83,17 @@ function CustomersList({
                     <button onClick={() => onEdit(c)} className="text-xs underline hover:text-primary">
                       Editar
                     </button>
-                    <button onClick={() => onDelete(c.id)} className="text-xs text-destructive underline hover:opacity-80">
-                      Excluir
+                    <button
+                      onClick={() => onDelete(c.id)}
+                      disabled={deletingIds.has(c.id)}
+                      className="text-xs text-destructive underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {deletingIds.has(c.id) ? (
+                        <span className="flex items-center gap-1">
+                          <Spinner className="h-3 w-3" />
+                          Excluindo...
+                        </span>
+                      ) : 'Excluir'}
                     </button>
                   </div>
                 </td>
@@ -99,7 +111,7 @@ export function CustomersPage() {
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
   const [showExportModal, setShowExportModal] = useState(false)
 
-  const { showForm, setShowForm, editing, setEditing, handleEdit, handleCancel, afterSubmit, handleDelete, invalidate } =
+  const { showForm, setShowForm, editing, setEditing, handleEdit, handleCancel, afterSubmit, handleDelete, deletingIds, invalidate } =
     useEntityList<Customer>(customersApi.remove, () => {
       invalidateCustomers()
       setStatusOverrides({})
@@ -173,6 +185,7 @@ export function CustomersPage() {
         <CustomersList
           statusOverrides={statusOverrides}
           pendingIds={pendingIds}
+          deletingIds={deletingIds}
           onEdit={handleEdit}
           onDelete={(id) => handleDelete(id, 'Confirma exclusão do cliente? Todos os veículos vinculados serão removidos.')}
           onStatusChange={handleStatusChange}

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
+import { Spinner } from '@/components/atoms/Spinner'
 import { INPUT_BASE } from '@/shared/constants/styles'
 import { f } from '@/shared/schemas/fields'
 import { authApi } from '../api/auth.api'
@@ -94,7 +95,12 @@ export function ForgotPasswordPage() {
             disabled={isSubmitting}
             className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
-            {isSubmitting ? 'Enviando...' : 'Enviar link de redefinição'}
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <Spinner />
+                Enviando...
+              </span>
+            ) : 'Enviar link de redefinição'}
           </button>
 
           <p className="text-center text-sm text-muted-foreground">
