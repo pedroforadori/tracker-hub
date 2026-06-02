@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CurrentUser } from '../../common/types/current-user.type';
 import {
+  EXPORT_ROW_LIMIT,
   GenerateResult,
   SpreadsheetFormat,
   generateSpreadsheet,
+  parseDateRangeUTC,
   parseSpreadsheet,
 } from '../../common/utils/spreadsheet.util';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
@@ -47,10 +49,13 @@ export class VehiclesService {
     format: SpreadsheetFormat,
     user: CurrentUser,
   ): Promise<GenerateResult> {
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    toDate.setHours(23, 59, 59, 999);
+    const { fromDate, toDate } = parseDateRangeUTC(from, to);
     const records = await this.repo.findByDateRange(user.tenantId, fromDate, toDate);
+    if (records.length > EXPORT_ROW_LIMIT) {
+      throw new BadRequestException(
+        `Período selecionado excede ${EXPORT_ROW_LIMIT.toLocaleString()} registros. Reduza o intervalo de datas.`,
+      );
+    }
     const rows = records.map((v) => ({
       Placa: v.plate,
       Marca: v.brand,
@@ -72,30 +77,39 @@ export class VehiclesService {
     const errors: { row: number; message: string }[] = [];
     let imported = 0;
 
+    type Payload = { plate: string; brand: string; model: string; year: number; customerId: string };
+    const validPayloads: { data: Payload; rowNum: number }[] = [];
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowNum = i + 2;
+      const plate = String(row['Placa'] ?? '').trim().toUpperCase();
+      const brand = String(row['Marca'] ?? '').trim();
+      const model = String(row['Modelo'] ?? '').trim();
+      const year = parseInt(String(row['Ano'] ?? '0'), 10);
+      const cnpj = String(row['CNPJ do Cliente'] ?? '').replace(/\D/g, '');
+
+      if (!plate) { errors.push({ row: rowNum, message: 'Placa é obrigatória' }); continue; }
+      if (!brand) { errors.push({ row: rowNum, message: 'Marca é obrigatória' }); continue; }
+      if (!model) { errors.push({ row: rowNum, message: 'Modelo é obrigatório' }); continue; }
+      if (!year || year < 1990) { errors.push({ row: rowNum, message: 'Ano inválido (mínimo 1990)' }); continue; }
+      if (cnpj.length !== 14) { errors.push({ row: rowNum, message: 'CNPJ do Cliente inválido (deve ter 14 dígitos)' }); continue; }
+
+      const customer = await this.repo.findCustomerByCnpj(cnpj, user.tenantId);
+      if (!customer) { errors.push({ row: rowNum, message: `Cliente com CNPJ ${cnpj} não encontrado` }); continue; }
+
+      validPayloads.push({ data: { plate, brand, model, year, customerId: customer.id }, rowNum });
+    }
+
+    if (validPayloads.length > 0) {
       try {
-        const plate = String(row['Placa'] ?? '').trim().toUpperCase();
-        const brand = String(row['Marca'] ?? '').trim();
-        const model = String(row['Modelo'] ?? '').trim();
-        const year = parseInt(String(row['Ano'] ?? '0'), 10);
-        const cnpj = String(row['CNPJ do Cliente'] ?? '').replace(/\D/g, '');
-
-        if (!plate) { errors.push({ row: rowNum, message: 'Placa é obrigatória' }); continue; }
-        if (!brand) { errors.push({ row: rowNum, message: 'Marca é obrigatória' }); continue; }
-        if (!model) { errors.push({ row: rowNum, message: 'Modelo é obrigatório' }); continue; }
-        if (!year || year < 1990) { errors.push({ row: rowNum, message: 'Ano inválido (mínimo 1990)' }); continue; }
-        if (cnpj.length !== 14) { errors.push({ row: rowNum, message: 'CNPJ do Cliente inválido (deve ter 14 dígitos)' }); continue; }
-
-        const customer = await this.repo.findCustomerByCnpj(cnpj, user.tenantId);
-        if (!customer) { errors.push({ row: rowNum, message: `Cliente com CNPJ ${cnpj} não encontrado` }); continue; }
-
-        await this.repo.create({ plate, brand, model, year, customerId: customer.id }, user.tenantId);
-        imported++;
+        await this.repo.createMany(validPayloads.map((p) => p.data), user.tenantId);
+        imported = validPayloads.length;
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-        errors.push({ row: rowNum, message: msg });
+        const msg = err instanceof Error ? err.message : 'Erro ao inserir no banco';
+        for (const { rowNum } of validPayloads) {
+          errors.push({ row: rowNum, message: msg });
+        }
       }
     }
 

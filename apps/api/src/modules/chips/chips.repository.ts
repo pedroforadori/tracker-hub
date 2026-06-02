@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EXPORT_ROW_LIMIT } from '../../common/utils/spreadsheet.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateChipDto } from './dto/create-chip.dto';
 import { UpdateChipDto } from './dto/update-chip.dto';
@@ -39,10 +40,15 @@ export class ChipsRepository {
       where: { tenantId, createdAt: { gte: from, lte: to } },
       include: { tracker: { select: { imei: true } } },
       orderBy: { createdAt: 'asc' },
+      take: EXPORT_ROW_LIMIT + 1,
     });
   }
 
   findTrackerByImei(imei: string, tenantId: string) {
     return this.prisma.tracker.findFirst({ where: { imei, tenantId } });
+  }
+
+  createMany(dtos: CreateChipDto[], tenantId: string) {
+    return this.prisma.chip.createMany({ data: dtos.map((d) => ({ ...d, tenantId })) });
   }
 }

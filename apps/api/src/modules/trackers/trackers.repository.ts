@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EXPORT_ROW_LIMIT } from '../../common/utils/spreadsheet.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTrackerDto } from './dto/create-tracker.dto';
 import { UpdateTrackerDto } from './dto/update-tracker.dto';
@@ -38,10 +39,15 @@ export class TrackersRepository {
       where: { tenantId, createdAt: { gte: from, lte: to } },
       include: { vehicle: { select: { plate: true } }, chip: { select: { iccid: true } } },
       orderBy: { createdAt: 'asc' },
+      take: EXPORT_ROW_LIMIT + 1,
     });
   }
 
   findVehicleByPlate(plate: string, tenantId: string) {
     return this.prisma.vehicle.findFirst({ where: { plate, tenantId } });
+  }
+
+  createMany(dtos: CreateTrackerDto[], tenantId: string) {
+    return this.prisma.tracker.createMany({ data: dtos.map((d) => ({ ...d, tenantId })) });
   }
 }

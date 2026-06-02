@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EXPORT_ROW_LIMIT } from '../../common/utils/spreadsheet.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
@@ -38,10 +39,15 @@ export class VehiclesRepository {
       where: { tenantId, createdAt: { gte: from, lte: to } },
       include: { customer: { select: { name: true, cnpj: true } } },
       orderBy: { createdAt: 'asc' },
+      take: EXPORT_ROW_LIMIT + 1,
     });
   }
 
   findCustomerByCnpj(cnpj: string, tenantId: string) {
     return this.prisma.customer.findFirst({ where: { cnpj, tenantId } });
+  }
+
+  createMany(dtos: CreateVehicleDto[], tenantId: string) {
+    return this.prisma.vehicle.createMany({ data: dtos.map((d) => ({ ...d, tenantId })) });
   }
 }

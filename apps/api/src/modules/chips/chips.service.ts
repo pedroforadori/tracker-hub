@@ -1,9 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CurrentUser } from '../../common/types/current-user.type';
 import {
+  EXPORT_ROW_LIMIT,
   GenerateResult,
   SpreadsheetFormat,
   generateSpreadsheet,
+  parseDateRangeUTC,
   parseSpreadsheet,
 } from '../../common/utils/spreadsheet.util';
 import { CreateChipDto } from './dto/create-chip.dto';
@@ -56,10 +58,13 @@ export class ChipsService {
     format: SpreadsheetFormat,
     user: CurrentUser,
   ): Promise<GenerateResult> {
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    toDate.setHours(23, 59, 59, 999);
+    const { fromDate, toDate } = parseDateRangeUTC(from, to);
     const records = await this.repo.findByDateRange(user.tenantId, fromDate, toDate);
+    if (records.length > EXPORT_ROW_LIMIT) {
+      throw new BadRequestException(
+        `Período selecionado excede ${EXPORT_ROW_LIMIT.toLocaleString()} registros. Reduza o intervalo de datas.`,
+      );
+    }
     const rows = records.map((c) => ({
       ICCID: c.iccid,
       'Número de Telefone': c.phoneNumber,
@@ -79,31 +84,52 @@ export class ChipsService {
     const errors: { row: number; message: string }[] = [];
     let imported = 0;
 
+    type Payload = { iccid: string; phoneNumber: string; provider: string; trackerId: string };
+    const validPayloads: { data: Payload; rowNum: number }[] = [];
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowNum = i + 2;
+      const iccid = String(row['ICCID'] ?? '').trim();
+      const phoneNumber = String(row['Número de Telefone'] ?? '').replace(/\D/g, '');
+      const provider = String(row['Operadora'] ?? '').trim();
+      const imei = String(row['IMEI do Rastreador'] ?? '').replace(/\D/g, '');
+
+      if (iccid.length < 18) { errors.push({ row: rowNum, message: 'ICCID inválido (mínimo 18 caracteres)' }); continue; }
+      if (phoneNumber.length < 10) { errors.push({ row: rowNum, message: 'Número de Telefone inválido (mínimo 10 dígitos)' }); continue; }
+      if (!provider) { errors.push({ row: rowNum, message: 'Operadora é obrigatória' }); continue; }
+      if (imei.length !== 15) { errors.push({ row: rowNum, message: 'IMEI do Rastreador inválido (deve ter 15 dígitos)' }); continue; }
+
+      const tracker = await this.repo.findTrackerByImei(imei, user.tenantId);
+      if (!tracker) { errors.push({ row: rowNum, message: `Rastreador com IMEI ${imei} não encontrado` }); continue; }
+
+      const conflict = await this.repo.findByTrackerId(tracker.id, user.tenantId);
+      if (conflict) { errors.push({ row: rowNum, message: `Rastreador com IMEI ${imei} já possui chip vinculado` }); continue; }
+
+      validPayloads.push({ data: { iccid, phoneNumber, provider, trackerId: tracker.id }, rowNum });
+    }
+
+    if (validPayloads.length > 0) {
       try {
-        const iccid = String(row['ICCID'] ?? '').trim();
-        const phoneNumber = String(row['Número de Telefone'] ?? '').replace(/\D/g, '');
-        const provider = String(row['Operadora'] ?? '').trim();
-        const imei = String(row['IMEI do Rastreador'] ?? '').replace(/\D/g, '');
-
-        if (iccid.length < 18) { errors.push({ row: rowNum, message: 'ICCID inválido (mínimo 18 caracteres)' }); continue; }
-        if (phoneNumber.length < 10) { errors.push({ row: rowNum, message: 'Número de Telefone inválido (mínimo 10 dígitos)' }); continue; }
-        if (!provider) { errors.push({ row: rowNum, message: 'Operadora é obrigatória' }); continue; }
-        if (imei.length !== 15) { errors.push({ row: rowNum, message: 'IMEI do Rastreador inválido (deve ter 15 dígitos)' }); continue; }
-
-        const tracker = await this.repo.findTrackerByImei(imei, user.tenantId);
-        if (!tracker) { errors.push({ row: rowNum, message: `Rastreador com IMEI ${imei} não encontrado` }); continue; }
-
-        const conflict = await this.repo.findByTrackerId(tracker.id, user.tenantId);
-        if (conflict) { errors.push({ row: rowNum, message: `Rastreador com IMEI ${imei} já possui chip vinculado` }); continue; }
-
-        await this.repo.create({ iccid, phoneNumber, provider, trackerId: tracker.id }, user.tenantId);
-        imported++;
+        await this.repo.createMany(validPayloads.map((p) => p.data), user.tenantId);
+        imported = validPayloads.length;
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-        errors.push({ row: rowNum, message: msg });
+        // P2002 = unique constraint: race condition between concurrent imports for the same tracker
+        if ((err as { code?: string }).code === 'P2002') {
+          for (const { data, rowNum } of validPayloads) {
+            try {
+              await this.repo.create(data, user.tenantId);
+              imported++;
+            } catch {
+              errors.push({ row: rowNum, message: `Rastreador já possui chip vinculado (conflito)` });
+            }
+          }
+        } else {
+          const msg = err instanceof Error ? err.message : 'Erro ao inserir no banco';
+          for (const { rowNum } of validPayloads) {
+            errors.push({ row: rowNum, message: msg });
+          }
+        }
       }
     }
 

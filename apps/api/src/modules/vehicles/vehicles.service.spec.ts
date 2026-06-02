@@ -8,6 +8,7 @@ const mockRepo = {
   findAll: jest.fn(),
   findOne: jest.fn(),
   create: jest.fn(),
+  createMany: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
   findByDateRange: jest.fn(),
@@ -136,14 +137,17 @@ describe('VehiclesService', () => {
 
     it('importa linha válida após encontrar cliente por CNPJ', async () => {
       mockRepo.findCustomerByCnpj.mockResolvedValue(customerEntity);
-      mockRepo.create.mockResolvedValue(vehicleEntity);
+      mockRepo.createMany.mockResolvedValue({ count: 1 });
       const result = await service.importFromFile(
         makeFile('Placa,Marca,Modelo,Ano,CNPJ do Cliente\nABC1D23,Toyota,Corolla,2022,12345678000199'),
         currentUser,
       );
       expect(result.imported).toBe(1);
       expect(result.errors).toHaveLength(0);
-      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ plate: 'ABC1D23', customerId: 'cust-1' }), 'tenant-1');
+      expect(mockRepo.createMany).toHaveBeenCalledWith(
+        [expect.objectContaining({ plate: 'ABC1D23', customerId: 'cust-1' })],
+        'tenant-1',
+      );
     });
 
     it('registra erro quando cliente não é encontrado pelo CNPJ', async () => {

@@ -9,6 +9,7 @@ const mockRepo = {
   findOne: jest.fn(),
   findByTrackerId: jest.fn(),
   create: jest.fn(),
+  createMany: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
   findByDateRange: jest.fn(),
@@ -153,13 +154,30 @@ describe('ChipsService', () => {
     it('importa linha válida após encontrar rastreador pelo IMEI', async () => {
       mockRepo.findTrackerByImei.mockResolvedValue(trackerEntity);
       mockRepo.findByTrackerId.mockResolvedValue(null);
-      mockRepo.create.mockResolvedValue(chipEntity);
+      mockRepo.createMany.mockResolvedValue({ count: 1 });
       const result = await service.importFromFile(
         makeFile('ICCID,Número de Telefone,Operadora,IMEI do Rastreador\n"89550534000000000001",11999990001,Vivo,123456789012345'),
         currentUser,
       );
       expect(result.imported).toBe(1);
-      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ iccid: '89550534000000000001', trackerId: 'trk-1' }), 'tenant-1');
+      expect(mockRepo.createMany).toHaveBeenCalledWith(
+        [expect.objectContaining({ iccid: '89550534000000000001', trackerId: 'trk-1' })],
+        'tenant-1',
+      );
+    });
+
+    it('race condition P2002: fallback individual reporta conflito por linha', async () => {
+      mockRepo.findTrackerByImei.mockResolvedValue(trackerEntity);
+      mockRepo.findByTrackerId.mockResolvedValue(null);
+      const p2002 = Object.assign(new Error('Unique constraint'), { code: 'P2002' });
+      mockRepo.createMany.mockRejectedValueOnce(p2002);
+      mockRepo.create.mockRejectedValueOnce(Object.assign(new Error('conflict'), { code: 'P2002' }));
+      const result = await service.importFromFile(
+        makeFile('ICCID,Número de Telefone,Operadora,IMEI do Rastreador\n"89550534000000000001",11999990001,Vivo,123456789012345'),
+        currentUser,
+      );
+      expect(result.imported).toBe(0);
+      expect(result.errors[0].message).toContain('conflito');
     });
 
     it('registra erro quando rastreador não é encontrado pelo IMEI', async () => {

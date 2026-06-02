@@ -18,7 +18,7 @@ import type { Response } from 'express';
 import { memoryStorage } from 'multer';
 import { CurrentUserDecorator } from '../../common/decorators/current-user.decorator';
 import type { CurrentUser } from '../../common/types/current-user.type';
-import type { SpreadsheetFormat } from '../../common/utils/spreadsheet.util';
+import { VALID_FORMATS, type SpreadsheetFormat } from '../../common/utils/spreadsheet.util';
 import { CreateTrackerDto } from './dto/create-tracker.dto';
 import { UpdateTrackerDto } from './dto/update-tracker.dto';
 import { TrackersService } from './trackers.service';
@@ -43,6 +43,7 @@ export class TrackersController {
     @Res() res: Response,
   ) {
     if (!from || !to) throw new BadRequestException('Parâmetros from e to são obrigatórios');
+    if (!VALID_FORMATS.includes(format)) throw new BadRequestException('Formato inválido. Use xlsx ou csv');
     const result = await this.service.exportByDateRange(from, to, format, user);
     res.setHeader('Content-Type', result.mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
@@ -55,6 +56,7 @@ export class TrackersController {
     @Query('format') format: SpreadsheetFormat = 'xlsx',
     @Res() res: Response,
   ) {
+    if (!VALID_FORMATS.includes(format)) throw new BadRequestException('Formato inválido. Use xlsx ou csv');
     const result = this.service.getImportTemplate(format);
     res.setHeader('Content-Type', result.mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
@@ -64,7 +66,7 @@ export class TrackersController {
   @Post('import')
   @ApiOperation({ summary: 'Importar rastreadores via CSV ou XLSX' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }))
   importFromFile(
     @UploadedFile() file: { buffer: Buffer; originalname: string },
     @CurrentUserDecorator() user: CurrentUser,

@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { generateSpreadsheet, parseSpreadsheet } from './spreadsheet.util';
+import { generateSpreadsheet, parseDateRangeUTC, parseSpreadsheet } from './spreadsheet.util';
 
 describe('spreadsheet.util', () => {
   const headers = ['Nome', 'CNPJ', 'Email'];
@@ -58,6 +58,33 @@ describe('spreadsheet.util', () => {
       const parsed = parseSpreadsheet(buffer, filename);
       expect(parsed).toHaveLength(2);
       expect(String(parsed[0]['Nome'])).toBe('Empresa A');
+    });
+  });
+
+  describe('parseDateRangeUTC()', () => {
+    it('fromDate aponta para meia-noite UTC do dia inicial', () => {
+      const { fromDate } = parseDateRangeUTC('2025-06-01', '2025-06-30');
+      expect(fromDate.getUTCFullYear()).toBe(2025);
+      expect(fromDate.getUTCMonth()).toBe(5);
+      expect(fromDate.getUTCDate()).toBe(1);
+      expect(fromDate.getUTCHours()).toBe(0);
+      expect(fromDate.getUTCMinutes()).toBe(0);
+      expect(fromDate.getUTCSeconds()).toBe(0);
+    });
+
+    it('toDate aponta para 23:59:59.999 UTC do dia final', () => {
+      const { toDate } = parseDateRangeUTC('2025-06-01', '2025-06-30');
+      expect(toDate.getUTCDate()).toBe(30);
+      expect(toDate.getUTCHours()).toBe(23);
+      expect(toDate.getUTCMinutes()).toBe(59);
+      expect(toDate.getUTCSeconds()).toBe(59);
+      expect(toDate.getUTCMilliseconds()).toBe(999);
+    });
+
+    it('fromDate e toDate são instâncias de Date', () => {
+      const { fromDate, toDate } = parseDateRangeUTC('2025-01-01', '2025-12-31');
+      expect(fromDate).toBeInstanceOf(Date);
+      expect(toDate).toBeInstanceOf(Date);
     });
   });
 

@@ -2,9 +2,11 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { CustomerStatus } from '@prisma/client';
 import { CurrentUser } from '../../common/types/current-user.type';
 import {
+  EXPORT_ROW_LIMIT,
   GenerateResult,
   SpreadsheetFormat,
   generateSpreadsheet,
+  parseDateRangeUTC,
   parseSpreadsheet,
 } from '../../common/utils/spreadsheet.util';
 import { CreateCustomerDto } from './dto/create-customer.dto';
@@ -48,10 +50,13 @@ export class CustomersService {
     format: SpreadsheetFormat,
     user: CurrentUser,
   ): Promise<GenerateResult> {
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    toDate.setHours(23, 59, 59, 999);
+    const { fromDate, toDate } = parseDateRangeUTC(from, to);
     const records = await this.repo.findByDateRange(user.tenantId, fromDate, toDate);
+    if (records.length > EXPORT_ROW_LIMIT) {
+      throw new BadRequestException(
+        `Período selecionado excede ${EXPORT_ROW_LIMIT.toLocaleString()} registros. Reduza o intervalo de datas.`,
+      );
+    }
     const rows = records.map((c) => ({
       Nome: c.name,
       CNPJ: c.cnpj,
@@ -73,29 +78,38 @@ export class CustomersService {
     const errors: { row: number; message: string }[] = [];
     let imported = 0;
 
+    type Payload = CreateCustomerDto & { status: CustomerStatus };
+    const validPayloads: { data: Payload; rowNum: number }[] = [];
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowNum = i + 2;
+      const name = String(row['Nome'] ?? '').trim();
+      const cnpj = String(row['CNPJ'] ?? '').replace(/\D/g, '');
+      const email = String(row['Email'] ?? '').trim();
+      const phone = String(row['Telefone'] ?? '').replace(/\D/g, '');
+      const monthlyFeeRaw = String(row['Mensalidade'] ?? '0').replace(/,/g, '.');
+      const monthlyFee = parseFloat(monthlyFeeRaw) || 0;
+      const statusRaw = String(row['Status'] ?? 'ATIVO').trim().toUpperCase();
+      const status = statusRaw as CustomerStatus;
+
+      if (!name) { errors.push({ row: rowNum, message: 'Nome é obrigatório' }); continue; }
+      if (cnpj.length !== 14) { errors.push({ row: rowNum, message: 'CNPJ inválido (deve ter 14 dígitos)' }); continue; }
+      if (!email.includes('@')) { errors.push({ row: rowNum, message: 'E-mail inválido' }); continue; }
+      if (!['ATIVO', 'INATIVO'].includes(statusRaw)) { errors.push({ row: rowNum, message: 'Status inválido (use ATIVO ou INATIVO)' }); continue; }
+
+      validPayloads.push({ data: { name, cnpj, email, phone, monthlyFee, status }, rowNum });
+    }
+
+    if (validPayloads.length > 0) {
       try {
-        const name = String(row['Nome'] ?? '').trim();
-        const cnpj = String(row['CNPJ'] ?? '').replace(/\D/g, '');
-        const email = String(row['Email'] ?? '').trim();
-        const phone = String(row['Telefone'] ?? '').replace(/\D/g, '');
-        const monthlyFeeRaw = String(row['Mensalidade'] ?? '0').replace(',', '.');
-        const monthlyFee = parseFloat(monthlyFeeRaw) || 0;
-        const statusRaw = String(row['Status'] ?? 'ATIVO').trim().toUpperCase();
-        const status = statusRaw as CustomerStatus;
-
-        if (!name) { errors.push({ row: rowNum, message: 'Nome é obrigatório' }); continue; }
-        if (cnpj.length !== 14) { errors.push({ row: rowNum, message: 'CNPJ inválido (deve ter 14 dígitos)' }); continue; }
-        if (!email.includes('@')) { errors.push({ row: rowNum, message: 'E-mail inválido' }); continue; }
-        if (!['ATIVO', 'INATIVO'].includes(statusRaw)) { errors.push({ row: rowNum, message: 'Status inválido (use ATIVO ou INATIVO)' }); continue; }
-
-        await this.repo.create({ name, cnpj, email, phone, monthlyFee, status }, user.tenantId);
-        imported++;
+        await this.repo.createMany(validPayloads.map((p) => p.data), user.tenantId);
+        imported = validPayloads.length;
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-        errors.push({ row: rowNum, message: msg });
+        const msg = err instanceof Error ? err.message : 'Erro ao inserir no banco';
+        for (const { rowNum } of validPayloads) {
+          errors.push({ row: rowNum, message: msg });
+        }
       }
     }
 

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EXPORT_ROW_LIMIT } from '../../common/utils/spreadsheet.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -31,6 +32,11 @@ export class CustomersRepository {
     return this.prisma.customer.findMany({
       where: { tenantId, createdAt: { gte: from, lte: to } },
       orderBy: { createdAt: 'asc' },
+      take: EXPORT_ROW_LIMIT + 1,
     });
+  }
+
+  createMany(dtos: CreateCustomerDto[], tenantId: string) {
+    return this.prisma.customer.createMany({ data: dtos.map((d) => ({ ...d, tenantId })) });
   }
 }

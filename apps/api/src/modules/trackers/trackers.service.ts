@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CurrentUser } from '../../common/types/current-user.type';
 import {
+  EXPORT_ROW_LIMIT,
   GenerateResult,
   SpreadsheetFormat,
   generateSpreadsheet,
+  parseDateRangeUTC,
   parseSpreadsheet,
 } from '../../common/utils/spreadsheet.util';
 import { CreateTrackerDto } from './dto/create-tracker.dto';
@@ -47,10 +49,13 @@ export class TrackersService {
     format: SpreadsheetFormat,
     user: CurrentUser,
   ): Promise<GenerateResult> {
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    toDate.setHours(23, 59, 59, 999);
+    const { fromDate, toDate } = parseDateRangeUTC(from, to);
     const records = await this.repo.findByDateRange(user.tenantId, fromDate, toDate);
+    if (records.length > EXPORT_ROW_LIMIT) {
+      throw new BadRequestException(
+        `Período selecionado excede ${EXPORT_ROW_LIMIT.toLocaleString()} registros. Reduza o intervalo de datas.`,
+      );
+    }
     const rows = records.map((t) => ({
       IMEI: t.imei,
       Marca: t.brand,
@@ -71,28 +76,37 @@ export class TrackersService {
     const errors: { row: number; message: string }[] = [];
     let imported = 0;
 
+    type Payload = { imei: string; brand: string; model: string; vehicleId: string };
+    const validPayloads: { data: Payload; rowNum: number }[] = [];
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowNum = i + 2;
+      const imei = String(row['IMEI'] ?? '').replace(/\D/g, '');
+      const brand = String(row['Marca'] ?? '').trim();
+      const model = String(row['Modelo'] ?? '').trim();
+      const plate = String(row['Placa do Veículo'] ?? '').trim().toUpperCase();
+
+      if (imei.length !== 15) { errors.push({ row: rowNum, message: 'IMEI inválido (deve ter 15 dígitos)' }); continue; }
+      if (!brand) { errors.push({ row: rowNum, message: 'Marca é obrigatória' }); continue; }
+      if (!model) { errors.push({ row: rowNum, message: 'Modelo é obrigatório' }); continue; }
+      if (!plate) { errors.push({ row: rowNum, message: 'Placa do Veículo é obrigatória' }); continue; }
+
+      const vehicle = await this.repo.findVehicleByPlate(plate, user.tenantId);
+      if (!vehicle) { errors.push({ row: rowNum, message: `Veículo com placa ${plate} não encontrado` }); continue; }
+
+      validPayloads.push({ data: { imei, brand, model, vehicleId: vehicle.id }, rowNum });
+    }
+
+    if (validPayloads.length > 0) {
       try {
-        const imei = String(row['IMEI'] ?? '').replace(/\D/g, '');
-        const brand = String(row['Marca'] ?? '').trim();
-        const model = String(row['Modelo'] ?? '').trim();
-        const plate = String(row['Placa do Veículo'] ?? '').trim().toUpperCase();
-
-        if (imei.length !== 15) { errors.push({ row: rowNum, message: 'IMEI inválido (deve ter 15 dígitos)' }); continue; }
-        if (!brand) { errors.push({ row: rowNum, message: 'Marca é obrigatória' }); continue; }
-        if (!model) { errors.push({ row: rowNum, message: 'Modelo é obrigatório' }); continue; }
-        if (!plate) { errors.push({ row: rowNum, message: 'Placa do Veículo é obrigatória' }); continue; }
-
-        const vehicle = await this.repo.findVehicleByPlate(plate, user.tenantId);
-        if (!vehicle) { errors.push({ row: rowNum, message: `Veículo com placa ${plate} não encontrado` }); continue; }
-
-        await this.repo.create({ imei, brand, model, vehicleId: vehicle.id }, user.tenantId);
-        imported++;
+        await this.repo.createMany(validPayloads.map((p) => p.data), user.tenantId);
+        imported = validPayloads.length;
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-        errors.push({ row: rowNum, message: msg });
+        const msg = err instanceof Error ? err.message : 'Erro ao inserir no banco';
+        for (const { rowNum } of validPayloads) {
+          errors.push({ row: rowNum, message: msg });
+        }
       }
     }
 

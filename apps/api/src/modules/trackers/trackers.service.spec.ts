@@ -8,6 +8,7 @@ const mockRepo = {
   findAll: jest.fn(),
   findOne: jest.fn(),
   create: jest.fn(),
+  createMany: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
   findByDateRange: jest.fn(),
@@ -125,13 +126,16 @@ describe('TrackersService', () => {
 
     it('importa linha válida após encontrar veículo pela placa', async () => {
       mockRepo.findVehicleByPlate.mockResolvedValue(vehicleEntity);
-      mockRepo.create.mockResolvedValue(trackerEntity);
+      mockRepo.createMany.mockResolvedValue({ count: 1 });
       const result = await service.importFromFile(
         makeFile('IMEI,Marca,Modelo,Placa do Veículo\n123456789012345,Concox,GT06N,ABC1D23'),
         currentUser,
       );
       expect(result.imported).toBe(1);
-      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ imei: '123456789012345', vehicleId: 'veh-1' }), 'tenant-1');
+      expect(mockRepo.createMany).toHaveBeenCalledWith(
+        [expect.objectContaining({ imei: '123456789012345', vehicleId: 'veh-1' })],
+        'tenant-1',
+      );
     });
 
     it('registra erro quando veículo não é encontrado pela placa', async () => {

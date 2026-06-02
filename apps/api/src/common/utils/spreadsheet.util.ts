@@ -2,6 +2,16 @@ import * as XLSX from 'xlsx';
 
 export type SpreadsheetFormat = 'xlsx' | 'csv';
 
+export const VALID_FORMATS: SpreadsheetFormat[] = ['xlsx', 'csv'];
+export const EXPORT_ROW_LIMIT = 50_000;
+
+export function parseDateRangeUTC(from: string, to: string): { fromDate: Date; toDate: Date } {
+  return {
+    fromDate: new Date(`${from}T00:00:00.000Z`),
+    toDate: new Date(`${to}T23:59:59.999Z`),
+  };
+}
+
 export interface GenerateResult {
   buffer: Buffer;
   mimeType: string;
