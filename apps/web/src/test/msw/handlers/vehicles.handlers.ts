@@ -4,6 +4,17 @@ import { vehicle1, vehiclesList } from '../../fixtures/vehicles.fixtures'
 const BASE = 'http://localhost:3333'
 
 export const vehiclesHandlers = [
+  // Specific routes must come before /:id to avoid matching conflicts
+  http.get(`${BASE}/vehicles/export`, () =>
+    new HttpResponse(new Blob(['mock-export'], { type: 'application/octet-stream' })),
+  ),
+  http.get(`${BASE}/vehicles/import/template`, () =>
+    new HttpResponse(new Blob(['mock-template'], { type: 'application/octet-stream' })),
+  ),
+  http.post(`${BASE}/vehicles/import`, () =>
+    HttpResponse.json({ imported: 2, errors: [] }, { status: 201 }),
+  ),
+
   http.get(`${BASE}/vehicles`, () => HttpResponse.json(vehiclesList)),
   http.get(`${BASE}/vehicles/:id`, () => HttpResponse.json(vehicle1)),
   http.post(`${BASE}/vehicles`, async ({ request }) => {

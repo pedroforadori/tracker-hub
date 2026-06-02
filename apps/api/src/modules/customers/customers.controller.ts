@@ -1,7 +1,24 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Res,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
+import { memoryStorage } from 'multer';
 import { CurrentUserDecorator } from '../../common/decorators/current-user.decorator';
 import type { CurrentUser } from '../../common/types/current-user.type';
+import { VALID_FORMATS, type SpreadsheetFormat } from '../../common/utils/spreadsheet.util';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { CustomersService } from './customers.service';
@@ -16,6 +33,48 @@ export class CustomersController {
   @ApiOperation({ summary: 'Listar clientes do tenant' })
   findAll(@CurrentUserDecorator() user: CurrentUser) {
     return this.service.findAll(user);
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Exportar clientes por período (CSV ou XLSX)' })
+  async export(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('format') format: SpreadsheetFormat = 'xlsx',
+    @CurrentUserDecorator() user: CurrentUser,
+    @Res() res: Response,
+  ) {
+    if (!from || !to) throw new BadRequestException('Parâmetros from e to são obrigatórios');
+    if (!VALID_FORMATS.includes(format)) throw new BadRequestException('Formato inválido. Use xlsx ou csv');
+    const result = await this.service.exportByDateRange(from, to, format, user);
+    res.setHeader('Content-Type', result.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.buffer);
+  }
+
+  @Get('import/template')
+  @ApiOperation({ summary: 'Baixar modelo de importação de clientes' })
+  getImportTemplate(
+    @Query('format') format: SpreadsheetFormat = 'xlsx',
+    @Res() res: Response,
+  ) {
+    if (!VALID_FORMATS.includes(format)) throw new BadRequestException('Formato inválido. Use xlsx ou csv');
+    const result = this.service.getImportTemplate(format);
+    res.setHeader('Content-Type', result.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.buffer);
+  }
+
+  @Post('import')
+  @ApiOperation({ summary: 'Importar clientes via CSV ou XLSX' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }))
+  importFromFile(
+    @UploadedFile() file: { buffer: Buffer; originalname: string },
+    @CurrentUserDecorator() user: CurrentUser,
+  ) {
+    if (!file) throw new BadRequestException('Arquivo não enviado');
+    return this.service.importFromFile(file, user);
   }
 
   @Get(':id')

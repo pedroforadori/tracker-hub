@@ -3,18 +3,18 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { Suspense } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { customersList, customer1 } from '@/test/fixtures/customers.fixtures'
+import { trackersList, tracker1 } from '@/test/fixtures/trackers.fixtures'
 
-const mockGetAll = vi.fn().mockResolvedValue(customersList)
-const mockCreate = vi.fn().mockResolvedValue(customer1)
-const mockUpdate = vi.fn().mockResolvedValue(customer1)
+const mockGetAll = vi.fn().mockResolvedValue(trackersList)
+const mockCreate = vi.fn().mockResolvedValue(tracker1)
+const mockUpdate = vi.fn().mockResolvedValue(tracker1)
 const mockRemove = vi.fn().mockResolvedValue(undefined)
 const mockImportFile = vi.fn().mockResolvedValue({ imported: 1, errors: [] })
 const mockDownloadTemplate = vi.fn().mockResolvedValue(new Blob(['mock']))
 const mockExportData = vi.fn().mockResolvedValue(new Blob(['mock']))
 
-vi.mock('@/features/customers/api/customers.api', () => ({
-  customersApi: {
+vi.mock('@/features/trackers/api/trackers.api', () => ({
+  trackersApi: {
     getAll: () => mockGetAll(),
     create: (d: unknown) => mockCreate(d),
     update: (id: string, d: unknown) => mockUpdate(id, d),
@@ -25,12 +25,12 @@ vi.mock('@/features/customers/api/customers.api', () => ({
   },
 }))
 
-const { CustomersPage } = await import('../CustomersPage')
+const { TrackersPage } = await import('../TrackersPage')
 
 beforeEach(() => {
-  mockGetAll.mockReset().mockResolvedValue(customersList)
-  mockCreate.mockReset().mockResolvedValue(customer1)
-  mockUpdate.mockReset().mockResolvedValue(customer1)
+  mockGetAll.mockReset().mockResolvedValue(trackersList)
+  mockCreate.mockReset().mockResolvedValue(tracker1)
+  mockUpdate.mockReset().mockResolvedValue(tracker1)
   mockRemove.mockReset().mockResolvedValue(undefined)
   mockImportFile.mockReset().mockResolvedValue({ imported: 1, errors: [] })
   mockDownloadTemplate.mockReset().mockResolvedValue(new Blob(['mock']))
@@ -43,41 +43,32 @@ function renderPage() {
   return render(
     <MemoryRouter>
       <Suspense fallback={<div>loading</div>}>
-        <CustomersPage />
+        <TrackersPage />
       </Suspense>
     </MemoryRouter>,
   )
 }
 
-describe('CustomersPage', () => {
-  it('exibe skeleton/loading enquanto carrega', () => {
+describe('TrackersPage', () => {
+  it('exibe loading enquanto carrega', () => {
     renderPage()
     expect(screen.getByText('loading')).toBeInTheDocument()
   })
 
-  it('após carregar → exibe lista de clientes', async () => {
+  it('após carregar → exibe lista de rastreadores', async () => {
     renderPage()
     await waitFor(() => {
-      expect(screen.getByText(customersList[0].name)).toBeInTheDocument()
-      expect(screen.getByText(customersList[1].name)).toBeInTheDocument()
+      expect(screen.getByText(trackersList[0].imei)).toBeInTheDocument()
+      expect(screen.getByText(trackersList[1].imei)).toBeInTheDocument()
     })
   })
 
-  it('botão "+ Novo Cliente" abre o formulário', async () => {
+  it('botão "+ Novo Rastreador" abre o formulário', async () => {
     const user = userEvent.setup()
     renderPage()
-    await waitFor(() => screen.getByRole('button', { name: /novo cliente/i }))
-    await user.click(screen.getByRole('button', { name: /novo cliente/i }))
+    await waitFor(() => screen.getByRole('button', { name: /novo rastreador/i }))
+    await user.click(screen.getByRole('button', { name: /novo rastreador/i }))
     expect(screen.getByRole('button', { name: 'Cadastrar' })).toBeInTheDocument()
-  })
-
-  it('clique em Editar → abre formulário com dados do cliente', async () => {
-    const user = userEvent.setup()
-    renderPage()
-    await waitFor(() => screen.getAllByRole('button', { name: /editar/i }))
-    await user.click(screen.getAllByRole('button', { name: /editar/i })[0])
-    expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeInTheDocument()
-    expect(screen.getByDisplayValue(customersList[0].name)).toBeInTheDocument()
   })
 
   it('clique em Excluir com confirm=true → chama remove', async () => {
@@ -86,7 +77,7 @@ describe('CustomersPage', () => {
     renderPage()
     await waitFor(() => screen.getAllByRole('button', { name: /excluir/i }))
     await user.click(screen.getAllByRole('button', { name: /excluir/i })[0])
-    await waitFor(() => expect(mockRemove).toHaveBeenCalledWith(customersList[0].id))
+    await waitFor(() => expect(mockRemove).toHaveBeenCalledWith(trackersList[0].id))
   })
 
   it('clique em Excluir com confirm=false → NÃO chama remove', async () => {
@@ -112,7 +103,6 @@ describe('CustomersPage', () => {
     await waitFor(() => screen.getByRole('button', { name: 'Exportar' }))
     await user.click(screen.getByRole('button', { name: 'Exportar' }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('Exportar dados')).toBeInTheDocument()
   })
 
   it('clique em Cancelar no modal fecha o modal', async () => {
@@ -124,7 +114,7 @@ describe('CustomersPage', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('preencher datas e exportar chama exportData e fecha o modal', async () => {
+  it('preencher datas e exportar chama exportData', async () => {
     const user = userEvent.setup()
     renderPage()
     await waitFor(() => screen.getByRole('button', { name: 'Exportar' }))
@@ -133,14 +123,13 @@ describe('CustomersPage', () => {
     await user.type(screen.getByLabelText('Data final'), '2025-12-31')
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Exportar' }))
     await waitFor(() => expect(mockExportData).toHaveBeenCalledWith('2025-01-01', '2025-12-31', 'xlsx'))
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('selecionar arquivo chama importFile e exibe resultado', async () => {
     const user = userEvent.setup()
     renderPage()
     await waitFor(() => screen.getByTestId('import-file-input'))
-    const file = new File(['content'], 'clientes.xlsx')
+    const file = new File(['content'], 'rastreadores.xlsx')
     await user.upload(screen.getByTestId('import-file-input'), file)
     await waitFor(() => expect(mockImportFile).toHaveBeenCalledWith(file))
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument())

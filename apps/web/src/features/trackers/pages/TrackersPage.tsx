@@ -1,6 +1,11 @@
-import { use } from 'react'
+import { use, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { Spinner } from '@/components/atoms/Spinner'
+import { ExportModal } from '@/components/molecules/ExportModal'
+import { ImportExportBar } from '@/components/molecules/ImportExportBar'
+import { ImportResultAlert } from '@/components/molecules/ImportResultAlert'
 import { useEntityList } from '@/shared/hooks/useEntityList'
+import { useImportExport } from '@/shared/hooks/useImportExport'
 import type { Tracker } from '@/shared/types/api'
 import { trackersApi } from '../api/trackers.api'
 import { TrackerForm, type TrackerFormData } from '../components/TrackerForm'
@@ -58,8 +63,16 @@ function TrackersList({ onEdit, onDelete, deletingIds }: { onEdit: (t: Tracker) 
 }
 
 export function TrackersPage() {
-  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, deletingIds } =
+  const [showExportModal, setShowExportModal] = useState(false)
+
+  const { showForm, setShowForm, editing, setEditing, refresh, handleEdit, handleCancel, afterSubmit, handleDelete, deletingIds, invalidate } =
     useEntityList<Tracker>(trackersApi.remove, () => { trackersPromise = trackersApi.getAll() })
+
+  const {
+    importing, downloadingTemplate, exporting,
+    importResult, importError, templateError, exportError,
+    handleImport, handleTemplateDownload, handleExport,
+  } = useImportExport(trackersApi, 'rastreadores', invalidate)
 
   const handleSubmit = async (data: TrackerFormData) => {
     if (editing) await trackersApi.update(editing.id, data)
@@ -69,15 +82,27 @@ export function TrackersPage() {
 
   return (
     <div className="space-y-6" key={refresh}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold">Rastreadores</h1>
-        {!showForm && (
-          <button onClick={() => { setEditing(null); setShowForm(true) }}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-            + Novo Rastreador
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <ImportExportBar
+            onImport={handleImport}
+            onTemplateDownload={handleTemplateDownload}
+            onExportOpen={() => setShowExportModal(true)}
+            importing={importing}
+            downloadingTemplate={downloadingTemplate}
+          />
+          {!showForm && (
+            <button onClick={() => { setEditing(null); setShowForm(true) }}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90">
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Novo Rastreador
+            </button>
+          )}
+        </div>
       </div>
+
+      <ImportResultAlert result={importResult} error={importError || templateError} />
 
       {showForm ? (
         <div className="rounded-lg border border-border p-6">
@@ -88,6 +113,18 @@ export function TrackersPage() {
         <div className="overflow-x-auto">
           <TrackersList onEdit={handleEdit} onDelete={(id) => handleDelete(id, 'Confirma exclusão?')} deletingIds={deletingIds} />
         </div>
+      )}
+
+      {showExportModal && (
+        <ExportModal
+          onClose={() => setShowExportModal(false)}
+          onExport={async (from, to, format) => {
+            const success = await handleExport(from, to, format)
+            if (success) setShowExportModal(false)
+          }}
+          exporting={exporting}
+          exportError={exportError}
+        />
       )}
     </div>
   )

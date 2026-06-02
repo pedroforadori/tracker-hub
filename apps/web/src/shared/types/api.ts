@@ -73,6 +73,22 @@ export interface Chip {
   createdAt: string
 }
 
+export interface ImportError {
+  row: number
+  message: string
+}
+
+export interface ImportResult {
+  imported: number
+  errors: ImportError[]
+}
+
+export interface ImportExportApi {
+  importFile: (file: File) => Promise<ImportResult>
+  downloadTemplate: (format: 'xlsx' | 'csv') => Promise<Blob>
+  exportData: (from: string, to: string, format: 'xlsx' | 'csv') => Promise<Blob>
+}
+
 export interface TeamMember {
   id: string
   name: string
